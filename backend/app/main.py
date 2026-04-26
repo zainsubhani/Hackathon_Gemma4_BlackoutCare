@@ -6,6 +6,9 @@ from app.users.router import router as users_router
 # Important: import models before create_all
 from app.users import models as users_models  # noqa: F401
 from app.patients.router import router as patients_router
+from app.triage.router import router as triage_router
+from app.triage import models as triage_models  # noqa: F401
+
 
 
 app = FastAPI(
@@ -18,6 +21,7 @@ Base.metadata.create_all(bind=engine)
 
 app.include_router(users_router)
 app.include_router(patients_router)
+app.include_router(triage_router)
 
 
 
