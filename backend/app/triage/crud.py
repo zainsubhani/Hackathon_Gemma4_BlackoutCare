@@ -9,6 +9,7 @@ from app.triage.schemas import TriageCaseCreate, CaseStatus
 from app.patients.models import Patient
 from app.ai.service import build_triage_prompt, call_gemma, parse_gemma_json
 from app.ai.crud import create_ai_recommendation
+from app.events.crud import create_event
 
 
 def create_triage_case(db: Session, triage_case: TriageCaseCreate):
@@ -33,6 +34,19 @@ def create_triage_case(db: Session, triage_case: TriageCaseCreate):
     db.add(db_case)
     db.commit()
     db.refresh(db_case)
+    create_event(
+    db=db,
+    event_type="TRIAGE_CASE_CREATED",
+    actor_id=triage_case.created_by,
+    case_id=db_case.id,
+    event_data={
+        "patient_id": triage_case.patient_id,
+        "chief_complaint": triage_case.chief_complaint,
+        "symptoms": triage_case.symptoms,
+        "vitals": triage_case.vitals,
+        "urgency_level": triage_case.urgency_level.value,
+        "status": triage_case.status.value,
+    },)
     return db_case
 
 
@@ -56,6 +70,15 @@ def update_triage_case_status(db: Session, case_id: int, status: CaseStatus):
     db_case.status = status.value
     db.commit()
     db.refresh(db_case)
+    create_event(
+    db=db,
+    event_type="TRIAGE_STATUS_UPDATED",
+    actor_id=None,
+    case_id=db_case.id,
+    event_data={
+        "new_status": status.value,
+    },
+)
     return db_case
 
 
@@ -90,6 +113,18 @@ def analyze_triage_case(db: Session, case_id: int):
     case_id=case_id,
     recommendation=parsed_response,
     )
+    create_event(
+    db=db,
+    event_type="AI_RECOMMENDATION_GENERATED",
+    actor_id=db_case.created_by,
+    case_id=case_id,
+    event_data={
+        "recommendation_id": saved_recommendation.id,
+        "urgency": parsed_response.get("urgency"),
+        "confidence": parsed_response.get("confidence"),
+        "source": parsed_response.get("source"),
+    },
+)
     return {
     "recommendation_id": saved_recommendation.id,
     "case_id": case_id,

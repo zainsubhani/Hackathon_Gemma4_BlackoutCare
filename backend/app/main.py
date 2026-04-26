@@ -2,6 +2,8 @@ from fastapi import FastAPI
 
 from app.core.database import Base, engine
 from app.users.router import router as users_router
+from app.events.router import router as events_router
+from app.events import models as events_models  # noqa: F401
 
 # Important: import models before create_all
 from app.users import models as users_models  # noqa: F401
@@ -23,6 +25,7 @@ Base.metadata.create_all(bind=engine)
 app.include_router(users_router)
 app.include_router(patients_router)
 app.include_router(triage_router)
+app.include_router(events_router)
 
 
 
