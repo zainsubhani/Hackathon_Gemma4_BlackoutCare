@@ -29,6 +29,9 @@ def get_triage_case(case_id: int, db: Session = Depends(get_db)):
 
     return triage_case
 
+@router.post("/{case_id}/analyze")
+def analyze_triage_case(case_id: int, db: Session = Depends(get_db)):
+    return crud.analyze_triage_case(db, case_id)
 
 @router.patch("/{case_id}/status", response_model=schemas.TriageCaseResponse)
 def update_triage_case_status(

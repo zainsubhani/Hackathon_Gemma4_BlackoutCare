@@ -8,6 +8,7 @@ from app.users import models as users_models  # noqa: F401
 from app.patients.router import router as patients_router
 from app.triage.router import router as triage_router
 from app.triage import models as triage_models  # noqa: F401
+from app.ai import model as ai_model  # noqa: F401
 
 
 
