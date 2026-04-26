@@ -29,17 +29,36 @@ def get_protocol(db: Session, protocol_id: int):
 
 def search_protocols(db: Session, query: str):
     query_lower = query.lower()
-
     protocols = db.query(Protocol).all()
 
-    matched = []
+    results = []
+
     for protocol in protocols:
         keywords = [
             keyword.strip()
             for keyword in protocol.trigger_keywords.lower().split(",")
+            if keyword.strip()
         ]
 
-        if any(keyword in query_lower for keyword in keywords):
-            matched.append(protocol)
+        matched_keywords = [
+            keyword for keyword in keywords
+            if keyword in query_lower
+        ]
 
-    return matched
+        if matched_keywords:
+            confidence_score = round(len(matched_keywords) / len(keywords), 2)
+
+            results.append({
+                "protocol": protocol,
+                "matched_keywords": matched_keywords,
+                "confidence_score": confidence_score,
+                "confidence_label": (
+                    "high" if confidence_score >= 0.6
+                    else "medium" if confidence_score >= 0.3
+                    else "low"
+                )
+            })
+
+    results.sort(key=lambda item: item["confidence_score"], reverse=True)
+
+    return results

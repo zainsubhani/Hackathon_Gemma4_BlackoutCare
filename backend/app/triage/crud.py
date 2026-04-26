@@ -10,6 +10,7 @@ from app.patients.models import Patient
 from app.ai.service import build_triage_prompt, call_gemma, parse_gemma_json
 from app.ai.crud import create_ai_recommendation
 from app.events.crud import create_event
+from app.protocols.crud import search_protocols
 
 
 def create_triage_case(db: Session, triage_case: TriageCaseCreate):
@@ -104,8 +105,29 @@ def analyze_triage_case(db: Session, case_id: int):
         "symptoms": db_case.symptoms,
         "vitals": db_case.vitals,
     }
+    search_query = f"{db_case.chief_complaint} {db_case.symptoms or ''} {db_case.vitals or ''}"
+    matched_protocols = search_protocols(db, search_query)
+    selected_protocol = matched_protocols[0] if matched_protocols else None
+    selected_protocol_result = matched_protocols[0] if matched_protocols else None
 
-    prompt = build_triage_prompt(case_data)
+    protocol_data = None
+    if selected_protocol:
+     protocol_data = selected_protocol_result["protocol"]
+     protocol_data = {
+        "title": selected_protocol.title,
+        "content": selected_protocol.content,
+        "matched_keywords": selected_protocol_result["matched_keywords"],
+        "confidence_score": selected_protocol_result["confidence_score"],
+        "confidence_label": selected_protocol_result["confidence_label"],
+        "why_used": (
+            f"Selected because the case matched these keywords: "
+            f"{', '.join(selected_protocol_result['matched_keywords'])}."
+        ),
+    }
+    else:
+     selected_protocol = None
+
+    prompt = build_triage_prompt(case_data, protocol_data)
     raw_response = call_gemma(prompt)
     parsed_response = parse_gemma_json(raw_response)
     saved_recommendation = create_ai_recommendation(
@@ -120,9 +142,11 @@ def analyze_triage_case(db: Session, case_id: int):
     case_id=case_id,
     event_data={
         "recommendation_id": saved_recommendation.id,
+        "protocol_used": selected_protocol.title if selected_protocol else None,
+        "matched_keywords": protocol_data.get("matched_keywords") if protocol_data else [],
+        "protocol_confidence": protocol_data.get("confidence_label") if protocol_data else None,
         "urgency": parsed_response.get("urgency"),
         "confidence": parsed_response.get("confidence"),
-        "source": parsed_response.get("source"),
     },
 )
     return {

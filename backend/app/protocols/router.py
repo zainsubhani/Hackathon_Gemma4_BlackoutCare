@@ -27,9 +27,21 @@ def get_protocol(protocol_id: int, db: Session = Depends(get_db)):
     return protocol
 
 
-@router.post("/search", response_model=list[schemas.ProtocolResponse])
+@router.post("/search")
 def search_protocols(
     payload: schemas.ProtocolSearchRequest,
     db: Session = Depends(get_db),
 ):
-    return crud.search_protocols(db, payload.query)
+    results = crud.search_protocols(db, payload.query)
+
+    return [
+        {
+            "id": item["protocol"].id,
+            "title": item["protocol"].title,
+            "category": item["protocol"].category,
+            "matched_keywords": item["matched_keywords"],
+            "confidence_score": item["confidence_score"],
+            "confidence_label": item["confidence_label"],
+        }
+        for item in results
+    ]
