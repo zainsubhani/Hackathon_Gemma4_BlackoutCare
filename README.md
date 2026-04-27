@@ -109,6 +109,7 @@ backend/
       models.py
       schemas.py
       crud.py
+      service.py
       router.py
     protocols/
       models.py
@@ -165,6 +166,7 @@ Create a `.env` file at the project root:
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/carecontinuum
 APP_ENV=development
+SECRET_KEY=carecontinuum-dev-secret-change-before-production
 OLLAMA_URL=http://localhost:11434/api/generate
 OLLAMA_MODEL=gemma:7b
 OLLAMA_TIMEOUT_SECONDS=30
@@ -253,6 +255,7 @@ Authorization: Bearer <access_token>
 
 ```text
 GET    /health
+GET    /status
 POST   /auth/login
 POST   /users/
 GET    /patients/
@@ -268,6 +271,16 @@ GET    /exports/downtime-report/pdf
 GET    /exports/triage-case/{case_id}/pdf
 ```
 
+List endpoints support basic pagination with `skip` and `limit`. Several routes also support lightweight filters:
+
+```text
+GET /patients/?skip=0&limit=50&patient_code=P-1001
+GET /triage/cases/?status=active&urgency_level=critical
+GET /protocols/?category=emergency
+GET /events/?event_type=PATIENT_CREATED
+GET /users/?role=doctor
+```
+
 ## Safety and Clinical Boundaries
 
 CareContinuum intentionally frames AI responses as decision support:
@@ -280,15 +293,18 @@ CareContinuum intentionally frames AI responses as decision support:
 
 ## Current Engineering Status
 
-The backend is hackathon-demo ready. It includes authentication, local AI integration, audit logging, exports, and Dockerized infrastructure.
+The backend is hackathon-demo ready. It includes authentication, local AI integration, audit logging, exports, Dockerized infrastructure, and a focused pytest suite.
+
+Testing documentation is available in:
+
+```text
+TESTING_README.md
+```
 
 Recommended next engineering improvements:
 
 - Replace `Base.metadata.create_all()` and startup schema patching with Alembic migrations.
-- Add pytest coverage for users, patients, protocols, triage, AI fallback, and exports.
-- Add pagination and filtering for list endpoints.
-- Move more triage orchestration from `crud.py` into a dedicated `service.py`.
-- Move `SECRET_KEY` into environment configuration.
+- Expand pytest coverage for invalid tokens, pagination, and report contents.
 - Add request/response examples for every endpoint.
 
 ## Project Positioning

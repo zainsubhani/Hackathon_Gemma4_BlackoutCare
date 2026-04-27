@@ -41,6 +41,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/carecontinuum
       APP_ENV: development
+      SECRET_KEY: carecontinuum-dev-secret-change-before-production
       OLLAMA_URL: http://ollama:11434/api/generate
       OLLAMA_MODEL: gemma:7b
       OLLAMA_TIMEOUT_SECONDS: 30
