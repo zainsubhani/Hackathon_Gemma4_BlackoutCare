@@ -36,6 +36,9 @@ async def lifespan(app: FastAPI):
 
 
 def ensure_development_schema():
+    if engine.dialect.name != "postgresql":
+        return
+
     with engine.begin() as connection:
         connection.execute(
             text("ALTER TABLE users ADD COLUMN IF NOT EXISTS hashed_password VARCHAR")
