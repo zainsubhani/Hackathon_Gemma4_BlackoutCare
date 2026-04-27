@@ -4,20 +4,28 @@ import requests
 from app.core.config import settings
 
 
-def build_triage_prompt(case_data: dict, protocol: dict | None = None) -> str:
+def build_triage_prompt(case_data: dict, protocols: list | None = None) -> str:
     protocol_section = ""
 
-    if protocol:
-        protocol_section = f"""
-Follow this emergency protocol strictly:
+    if protocols:
+        protocol_text = ""
 
-Protocol: {protocol.get("title")}
-Protocol match confidence: {protocol.get("confidence_label")}
-Matched keywords: {", ".join(protocol.get("matched_keywords", []))}
-Why this protocol was selected:
-{protocol.get("why_used")}
+        for i, protocol in enumerate(protocols, start=1):
+            protocol_text += f"""
+Protocol {i}: {protocol.get("title")}
+Confidence: {protocol.get("confidence_label")}
+Why used: {protocol.get("why_used")}
 
+Protocol content:
 {protocol.get("content")}
+"""
+
+        protocol_section = f"""
+You must consider ALL the following protocols:
+
+{protocol_text}
+
+Merge recommendations safely. Do not ignore any critical instruction.
 """
 
     return f"""
@@ -44,7 +52,7 @@ Triage:
 - Symptoms: {case_data.get("symptoms")}
 - Vitals: {case_data.get("vitals")}
 
-Return JSON:
+Return JSON in this exact structure:
 
 {{
   "urgency": "critical | urgent | stable",
@@ -52,11 +60,11 @@ Return JSON:
   "recommended_actions": ["action 1", "action 2"],
   "warnings": ["warning 1"],
   "confidence": "low | medium | high",
-  "source": "protocol name or fallback"
+  "source": "protocol name or fallback",
   "protocol_reasoning": ["why protocol was used"]
-
 }}
 """
+
 
 def call_gemma(prompt: str) -> str:
     response = requests.post(
@@ -77,7 +85,6 @@ def parse_gemma_json(raw_response: str) -> dict:
     try:
         return json.loads(raw_response)
     except json.JSONDecodeError:
-        # fallback if model adds extra text
         start = raw_response.find("{")
         end = raw_response.rfind("}") + 1
 

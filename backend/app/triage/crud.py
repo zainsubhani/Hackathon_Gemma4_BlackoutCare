@@ -6,7 +6,6 @@ from app.users.models import User
 from app.triage.models import TriageCase
 from app.triage.schemas import TriageCaseCreate, CaseStatus
 
-from app.patients.models import Patient
 from app.ai.service import build_triage_prompt, call_gemma, parse_gemma_json
 from app.ai.crud import create_ai_recommendation
 from app.events.crud import create_event
@@ -107,25 +106,25 @@ def analyze_triage_case(db: Session, case_id: int):
     }
     search_query = f"{db_case.chief_complaint} {db_case.symptoms or ''} {db_case.vitals or ''}"
     matched_protocols = search_protocols(db, search_query)
-    selected_protocol = matched_protocols[0] if matched_protocols else None
-    selected_protocol_result = matched_protocols[0] if matched_protocols else None
+    top_protocols = matched_protocols[:3] if matched_protocols else []
 
-    protocol_data = None
-    if selected_protocol:
-     protocol_data = selected_protocol_result["protocol"]
-     protocol_data = {
-        "title": selected_protocol.title,
-        "content": selected_protocol.content,
-        "matched_keywords": selected_protocol_result["matched_keywords"],
-        "confidence_score": selected_protocol_result["confidence_score"],
-        "confidence_label": selected_protocol_result["confidence_label"],
-        "why_used": (
-            f"Selected because the case matched these keywords: "
-            f"{', '.join(selected_protocol_result['matched_keywords'])}."
-        ),
-    }
-    else:
-     selected_protocol = None
+    protocol_data = []
+    for item in top_protocols:
+        protocol = item["protocol"]
+        matched_keywords = item.get("matched_keywords", [])
+        protocol_data.append(
+            {
+                "title": protocol.title,
+                "content": protocol.content,
+                "matched_keywords": matched_keywords,
+                "confidence_label": item.get("confidence_label"),
+                "why_used": (
+                    f"Matched keywords: {', '.join(matched_keywords)}"
+                    if matched_keywords
+                    else "Matched semantically"
+                ),
+            }
+        )
 
     prompt = build_triage_prompt(case_data, protocol_data)
     raw_response = call_gemma(prompt)
@@ -142,9 +141,16 @@ def analyze_triage_case(db: Session, case_id: int):
     case_id=case_id,
     event_data={
         "recommendation_id": saved_recommendation.id,
-        "protocol_used": selected_protocol.title if selected_protocol else None,
-        "matched_keywords": protocol_data.get("matched_keywords") if protocol_data else [],
-        "protocol_confidence": protocol_data.get("confidence_label") if protocol_data else None,
+        "protocols_used": [p["title"] for p in protocol_data],
+        "protocol_count": len(protocol_data),
+        "matched_keywords": [
+            keyword
+            for protocol in protocol_data
+            for keyword in protocol["matched_keywords"]
+        ],
+        "protocol_confidence": (
+            protocol_data[0]["confidence_label"] if protocol_data else None
+        ),
         "urgency": parsed_response.get("urgency"),
         "confidence": parsed_response.get("confidence"),
     },

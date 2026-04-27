@@ -11,6 +11,7 @@ from app.triage import models as triage_models
 from app.ai import model as ai_model 
 from app.protocols.router import router as protocols_router
 from app.protocols import models as protocols_models  
+from app.exports.router import router as exports_router
 
 
 
@@ -27,6 +28,7 @@ app.include_router(patients_router)
 app.include_router(triage_router)
 app.include_router(events_router)
 app.include_router(protocols_router)
+app.include_router(exports_router)
 
 
 
