@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, require_roles
@@ -32,10 +32,13 @@ def create_protocol(
 
 @router.get("/", response_model=list[schemas.ProtocolResponse])
 def get_protocols(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    category: str | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return crud.get_protocols(db)
+    return crud.get_protocols(db, skip=skip, limit=limit, category=category)
 
 
 @router.get("/{protocol_id}", response_model=schemas.ProtocolResponse)

@@ -1,10 +1,12 @@
 import logging
 from contextlib import asynccontextmanager
 
+import requests
 from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.core.config import settings
 from app.core.database import Base, engine
 from app.ai import models as ai_models  # noqa: F401
 from app.events import models as events_models  # noqa: F401
@@ -68,3 +70,34 @@ def health_check():
         "service": "carecontinuum-backend",
         "mode": "downtime-ready",
     }
+
+
+@app.get("/status")
+def status_check():
+    return {
+        "api": "ok",
+        "database": _database_status(),
+        "ollama": _ollama_status(),
+        "mode": "downtime-ready",
+    }
+
+
+def _database_status() -> str:
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return "ok"
+    except SQLAlchemyError:
+        logger.exception("Database status check failed")
+        return "unavailable"
+
+
+def _ollama_status() -> str:
+    try:
+        tags_url = settings.OLLAMA_URL.replace("/api/generate", "/api/tags")
+        response = requests.get(tags_url, timeout=2)
+        response.raise_for_status()
+        return "ok"
+    except requests.RequestException:
+        logger.info("Ollama status check failed")
+        return "unavailable"

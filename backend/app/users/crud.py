@@ -51,3 +51,19 @@ def create_user(db: Session, user: UserCreate):
             status_code=409,
             detail=f"User with staff_code '{user.staff_code}' already exists",
         )
+
+
+def get_users(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    role: str | None = None,
+):
+    query = db.query(User)
+    if role:
+        query = query.filter(User.role == role)
+    return query.offset(skip).limit(limit).all()
+
+
+def get_user(db: Session, user_id: int):
+    return db.query(User).filter(User.id == user_id).first()

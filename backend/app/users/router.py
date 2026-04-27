@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, require_roles
@@ -16,10 +16,13 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=list[schemas.UserResponse])
 def get_users(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    role: str | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles("admin", "coordinator")),
 ):
-    return crud.get_users(db)
+    return crud.get_users(db, skip=skip, limit=limit, role=role)
 
 
 @router.get("/{user_id}", response_model=schemas.UserResponse)

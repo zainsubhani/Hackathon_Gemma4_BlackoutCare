@@ -1,6 +1,6 @@
 import requests
 
-from app.triage import crud as triage_crud
+from app.triage import service as triage_service
 
 
 def test_triage_ai_failure_returns_safe_503(client, auth_headers, monkeypatch):
@@ -37,7 +37,7 @@ def test_triage_ai_failure_returns_safe_503(client, auth_headers, monkeypatch):
     def raise_timeout(prompt: str):
         raise requests.Timeout("Ollama timed out")
 
-    monkeypatch.setattr(triage_crud, "call_gemma", raise_timeout)
+    monkeypatch.setattr(triage_service, "call_gemma", raise_timeout)
 
     analyze_response = client.post(
         f"/triage/cases/{case_response.json()['id']}/analyze",

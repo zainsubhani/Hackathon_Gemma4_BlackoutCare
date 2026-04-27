@@ -19,8 +19,16 @@ def create_protocol(db: Session, protocol: ProtocolCreate):
     return db_protocol
 
 
-def get_protocols(db: Session):
-    return db.query(Protocol).order_by(Protocol.created_at.desc()).all()
+def get_protocols(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    category: str | None = None,
+):
+    query = db.query(Protocol)
+    if category:
+        query = query.filter(Protocol.category == category.lower())
+    return query.order_by(Protocol.created_at.desc()).offset(skip).limit(limit).all()
 
 
 def get_protocol(db: Session, protocol_id: int):

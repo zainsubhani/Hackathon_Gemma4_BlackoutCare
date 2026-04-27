@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
@@ -20,10 +20,18 @@ def create_patient(
 
 @router.get("/", response_model=list[schemas.PatientResponse])
 def get_patients(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    patient_code: str | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return crud.get_patients(db)
+    return crud.get_patients(
+        db,
+        skip=skip,
+        limit=limit,
+        patient_code=patient_code,
+    )
 
 
 @router.get("/{patient_id}", response_model=schemas.PatientResponse)

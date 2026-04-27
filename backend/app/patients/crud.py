@@ -53,8 +53,16 @@ def create_patient(db: Session, patient: PatientCreate, actor_id: int | None = N
         )
 
 
-def get_patients(db: Session):
-    return db.query(Patient).all()
+def get_patients(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    patient_code: str | None = None,
+):
+    query = db.query(Patient)
+    if patient_code:
+        query = query.filter(Patient.patient_code.ilike(f"%{patient_code.upper()}%"))
+    return query.offset(skip).limit(limit).all()
 
 
 def get_patient(db: Session, patient_id: int):
