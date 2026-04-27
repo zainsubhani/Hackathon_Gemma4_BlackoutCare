@@ -12,5 +12,6 @@ class User(Base):
     role = Column(String, nullable=False)  # doctor, nurse, admin
     department = Column(String, nullable=True)
     staff_code = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

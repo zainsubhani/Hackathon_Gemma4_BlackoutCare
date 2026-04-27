@@ -1,24 +1,49 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import get_current_user, require_roles
 from app.core.database import get_db
+from app.events.crud import create_event
 from app.protocols import crud, schemas
+from app.users.models import User
 
 router = APIRouter(prefix="/protocols", tags=["protocols"])
 
 
 @router.post("/", response_model=schemas.ProtocolResponse)
-def create_protocol(protocol: schemas.ProtocolCreate, db: Session = Depends(get_db)):
-    return crud.create_protocol(db, protocol)
+def create_protocol(
+    protocol: schemas.ProtocolCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("admin", "coordinator")),
+):
+    db_protocol = crud.create_protocol(db, protocol)
+    create_event(
+        db=db,
+        event_type="PROTOCOL_CREATED",
+        actor_id=current_user.id,
+        event_data={
+            "protocol_id": db_protocol.id,
+            "title": db_protocol.title,
+            "category": db_protocol.category,
+        },
+    )
+    return db_protocol
 
 
 @router.get("/", response_model=list[schemas.ProtocolResponse])
-def get_protocols(db: Session = Depends(get_db)):
+def get_protocols(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     return crud.get_protocols(db)
 
 
 @router.get("/{protocol_id}", response_model=schemas.ProtocolResponse)
-def get_protocol(protocol_id: int, db: Session = Depends(get_db)):
+def get_protocol(
+    protocol_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     protocol = crud.get_protocol(db, protocol_id)
 
     if not protocol:
@@ -31,6 +56,7 @@ def get_protocol(protocol_id: int, db: Session = Depends(get_db)):
 def search_protocols(
     payload: schemas.ProtocolSearchRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     results = crud.search_protocols(db, payload.query)
 

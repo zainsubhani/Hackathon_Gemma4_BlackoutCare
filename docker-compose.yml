@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: ankane/pgvector
+    container_name: carecontinuum-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: carecontinuum
+    ports:
+      - "5433:5432"
+    volumes:
+      - carecontinuum-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d carecontinuum"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama
+    container_name: carecontinuum-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - carecontinuum-ollama-data:/root/.ollama
+
+  ollama-model:
+    image: ollama/ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    command: ["pull", "gemma:7b"]
+    depends_on:
+      ollama:
+        condition: service_started
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: carecontinuum-backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/carecontinuum
+      APP_ENV: development
+      OLLAMA_URL: http://ollama:11434/api/generate
+      OLLAMA_MODEL: gemma:7b
+      OLLAMA_TIMEOUT_SECONDS: 30
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+      ollama-model:
+        condition: service_completed_successfully
+
+volumes:
+  carecontinuum-postgres-data:
+  carecontinuum-ollama-data:

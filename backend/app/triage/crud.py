@@ -1,3 +1,5 @@
+import requests
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -127,8 +129,28 @@ def analyze_triage_case(db: Session, case_id: int):
         )
 
     prompt = build_triage_prompt(case_data, protocol_data)
-    raw_response = call_gemma(prompt)
-    parsed_response = parse_gemma_json(raw_response)
+    try:
+        raw_response = call_gemma(prompt)
+        parsed_response = parse_gemma_json(raw_response)
+    except (requests.RequestException, ValueError, KeyError) as exc:
+        create_event(
+            db=db,
+            event_type="AI_RECOMMENDATION_FAILED",
+            actor_id=db_case.created_by,
+            case_id=case_id,
+            event_data={"reason": str(exc), "protocol_count": len(protocol_data)},
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "AI recommendation service unavailable",
+                "safe_fallback": [
+                    "Continue downtime protocol workflow manually.",
+                    "Escalate to the responsible clinician for urgent review.",
+                    "Document missing data and uncertainty in the patient record.",
+                ],
+            },
+        )
     saved_recommendation = create_ai_recommendation(
     db=db,
     case_id=case_id,

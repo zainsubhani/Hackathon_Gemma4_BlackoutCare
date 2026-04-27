@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     OLLAMA_URL: str = "http://localhost:11434/api/generate"
     OLLAMA_MODEL: str = "gemma:7b"
+    OLLAMA_TIMEOUT_SECONDS: int = 30
 
     model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8")
 

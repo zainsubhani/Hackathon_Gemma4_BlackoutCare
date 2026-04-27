@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -47,11 +48,16 @@ def build_full_downtime_report(db: Session) -> dict:
 
     return {
         "export_type": "full_hospital_downtime_report",
+        "generated_at": datetime.now(timezone.utc),
+        "hospital_name": "CareContinuum Demo Hospital",
         "summary": {
             "total_patients": len(patients),
             "total_triage_cases": len(triage_cases),
             "total_ai_recommendations": len(recommendations),
             "total_events": len(events),
+            "critical_triage_cases": sum(
+                1 for case in triage_cases if case.urgency_level == "critical"
+            ),
         },
         "patients": [_serialize_patient(patient) for patient in patients],
         "triage_cases": [_serialize_triage_case(case) for case in triage_cases],

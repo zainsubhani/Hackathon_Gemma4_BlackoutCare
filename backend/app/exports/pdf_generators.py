@@ -58,7 +58,10 @@ def generate_downtime_pdf(report: dict) -> BytesIO:
 
     # Header
     story.append(Paragraph("CareContinuum Downtime Report", title_style))
+    story.append(Paragraph(_text(report.get("hospital_name", "CareContinuum Demo Hospital")), body_style))
     story.append(Paragraph("Offline clinical workflow continuity report", body_style))
+    if report.get("generated_at"):
+        story.append(Paragraph(f"Generated: {_text(report.get('generated_at'))}", body_style))
     story.append(Spacer(1, 12))
 
     # Summary
@@ -71,6 +74,7 @@ def generate_downtime_pdf(report: dict) -> BytesIO:
             ["Metric", "Value"],
             ["Total Patients", summary.get("total_patients", 0)],
             ["Total Triage Cases", summary.get("total_triage_cases", 0)],
+            ["Critical Triage Cases", summary.get("critical_triage_cases", 0)],
             ["Total AI Recommendations", summary.get("total_ai_recommendations", 0)],
             ["Total Events", summary.get("total_events", 0)],
         ],

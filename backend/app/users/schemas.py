@@ -15,6 +15,7 @@ class UserCreate(BaseModel):
     role: UserRole
     department: str | None = Field(default=None, max_length=100)
     staff_code: str = Field(..., min_length=3, max_length=30)
+    password: str = Field(..., min_length=6, max_length=100)
 
     @field_validator("staff_code")
     @classmethod

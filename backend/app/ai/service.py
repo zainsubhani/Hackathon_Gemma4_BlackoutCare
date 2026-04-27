@@ -74,7 +74,7 @@ def call_gemma(prompt: str) -> str:
             "prompt": prompt,
             "stream": False,
         },
-        timeout=120,
+        timeout=settings.OLLAMA_TIMEOUT_SECONDS,
     )
 
     response.raise_for_status()
