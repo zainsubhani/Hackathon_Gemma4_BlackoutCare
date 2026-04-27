@@ -1,4 +1,6 @@
 from io import BytesIO
+from html import escape
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -10,6 +12,16 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+
+
+def _text(value) -> str:
+    if value is None:
+        return ""
+    return escape(str(value))
+
+
+def _paragraph(value, style):
+    return Paragraph(_text(value), style)
 
 
 def generate_downtime_pdf(report: dict) -> BytesIO:
@@ -79,43 +91,57 @@ def generate_downtime_pdf(report: dict) -> BytesIO:
     story.append(summary_table)
     story.append(Spacer(1, 14))
 
+    patient = report.get("patient")
+    if patient:
+        story.append(Paragraph("Patient", section_style))
+        patient_table = Table(
+            [
+                ["Patient Code", _paragraph(patient.get("patient_code"), body_style)],
+                ["Full Name", _paragraph(patient.get("full_name"), body_style)],
+                ["Age", _paragraph(patient.get("age"), body_style)],
+                ["Gender", _paragraph(patient.get("gender"), body_style)],
+                ["Allergy Status", _paragraph(patient.get("allergy_status"), body_style)],
+                ["Known Conditions", _paragraph(patient.get("known_conditions"), body_style)],
+                ["Current Medications", _paragraph(patient.get("current_medications"), body_style)],
+            ],
+            colWidths=[1.6 * inch, 4.8 * inch],
+        )
+        patient_table.setStyle(_detail_table_style())
+        story.append(patient_table)
+        story.append(Spacer(1, 14))
+
     # Triage Cases
     story.append(Paragraph("Clinical Cases", section_style))
 
-    for case in report.get("triage_cases", []):
+    triage_cases = report.get("triage_cases", [])
+    if report.get("triage_case"):
+        triage_cases = [report["triage_case"]]
+
+    for case in triage_cases:
         urgency = str(case.get("urgency_level", "unknown")).upper()
 
         story.append(
             Paragraph(
-                f"Case #{case.get('id')} — Urgency: {urgency}",
+                f"Case #{_text(case.get('id'))} - Urgency: {_text(urgency)}",
                 styles["Heading3"],
             )
         )
 
         case_table = Table(
             [
-                ["Patient ID", case.get("patient_id")],
-                ["Chief Complaint", case.get("chief_complaint")],
-                ["Symptoms", case.get("symptoms")],
-                ["Vitals", case.get("vitals")],
-                ["Status", case.get("status")],
-                ["Created By", case.get("created_by")],
-                ["Created At", str(case.get("created_at"))],
-                ["Updated At", str(case.get("updated_at"))],
+                ["Patient ID", _paragraph(case.get("patient_id"), body_style)],
+                ["Chief Complaint", _paragraph(case.get("chief_complaint"), body_style)],
+                ["Symptoms", _paragraph(case.get("symptoms"), body_style)],
+                ["Vitals", _paragraph(case.get("vitals"), body_style)],
+                ["Status", _paragraph(case.get("status"), body_style)],
+                ["Created By", _paragraph(case.get("created_by"), body_style)],
+                ["Created At", _paragraph(case.get("created_at"), body_style)],
+                ["Updated At", _paragraph(case.get("updated_at"), body_style)],
             ],
             colWidths=[1.6 * inch, 4.8 * inch],
         )
 
-        case_table.setStyle(
-            TableStyle(
-                [
-                    ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-                    ("BACKGROUND", (0, 0), (0, -1), colors.whitesmoke),
-                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-                    ("PADDING", (0, 0), (-1, -1), 5),
-                ]
-            )
-        )
+        case_table.setStyle(_detail_table_style())
 
         story.append(case_table)
         story.append(Spacer(1, 10))
@@ -126,28 +152,28 @@ def generate_downtime_pdf(report: dict) -> BytesIO:
     for rec in report.get("ai_recommendations", []):
         story.append(
             Paragraph(
-                f"Recommendation #{rec.get('id')} — Case #{rec.get('case_id')}",
+                f"Recommendation #{_text(rec.get('id'))} - Case #{_text(rec.get('case_id'))}",
                 styles["Heading3"],
             )
         )
 
-        story.append(Paragraph(f"<b>Urgency:</b> {rec.get('urgency')}", body_style))
-        story.append(Paragraph(f"<b>Risk:</b> {rec.get('risk_summary')}", body_style))
-        story.append(Paragraph(f"<b>Confidence:</b> {rec.get('confidence')}", body_style))
-        story.append(Paragraph(f"<b>Source:</b> {rec.get('source')}", body_style))
+        story.append(Paragraph(f"<b>Urgency:</b> {_text(rec.get('urgency'))}", body_style))
+        story.append(Paragraph(f"<b>Risk:</b> {_text(rec.get('risk_summary'))}", body_style))
+        story.append(Paragraph(f"<b>Confidence:</b> {_text(rec.get('confidence'))}", body_style))
+        story.append(Paragraph(f"<b>Source:</b> {_text(rec.get('source'))}", body_style))
         story.append(Spacer(1, 6))
 
         story.append(Paragraph("<b>Recommended Actions:</b>", body_style))
 
         for index, action in enumerate(rec.get("recommended_actions", []), start=1):
-            story.append(Paragraph(f"{index}. {action}", body_style))
+            story.append(Paragraph(f"{index}. {_text(action)}", body_style))
 
         warnings = rec.get("warnings", [])
         if warnings:
             story.append(Spacer(1, 6))
             story.append(Paragraph("<b>Warnings:</b>", body_style))
             for warning in warnings:
-                story.append(Paragraph(f"- {warning}", body_style))
+                story.append(Paragraph(f"- {_text(warning)}", body_style))
 
         story.append(Spacer(1, 12))
 
@@ -166,13 +192,13 @@ def generate_downtime_pdf(report: dict) -> BytesIO:
 
         story.append(
             Paragraph(
-                f"<b>{event.get('created_at')}</b> — {event.get('event_type')}",
+                f"<b>{_text(event.get('created_at'))}</b> - {_text(event.get('event_type'))}",
                 body_style,
             )
         )
 
-        story.append(Paragraph(f"Actor: {actor_text}", body_style))
-        story.append(Paragraph(f"Details: {event.get('event_data')}", body_style))
+        story.append(Paragraph(f"Actor: {_text(actor_text)}", body_style))
+        story.append(Paragraph(f"Details: {_text(event.get('event_data'))}", body_style))
         story.append(Spacer(1, 8))
 
     # Disclaimer
@@ -190,3 +216,15 @@ def generate_downtime_pdf(report: dict) -> BytesIO:
     doc.build(story)
     buffer.seek(0)
     return buffer 
+
+
+def _detail_table_style() -> TableStyle:
+    return TableStyle(
+        [
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("BACKGROUND", (0, 0), (0, -1), colors.whitesmoke),
+            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+            ("PADDING", (0, 0), (-1, -1), 5),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]
+    )

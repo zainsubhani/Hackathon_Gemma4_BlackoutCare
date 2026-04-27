@@ -1,7 +1,7 @@
 import json
 from sqlalchemy.orm import Session
 
-from app.ai.model import AIRecommendation
+from app.ai.models import AIRecommendation
 
 
 def create_ai_recommendation(db: Session, case_id: int, recommendation: dict):

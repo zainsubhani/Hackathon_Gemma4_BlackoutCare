@@ -1,27 +1,43 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database import Base, engine
-from app.users.router import router as users_router
+from app.ai import models as ai_models  # noqa: F401
+from app.events import models as events_models  # noqa: F401
 from app.events.router import router as events_router
-from app.events import models as events_models  
-from app.users import models as users_models  #
-from app.patients.router import router as patients_router
-from app.triage.router import router as triage_router
-from app.triage import models as triage_models  
-from app.ai import model as ai_model 
-from app.protocols.router import router as protocols_router
-from app.protocols import models as protocols_models  
 from app.exports.router import router as exports_router
+from app.patients.router import router as patients_router
+from app.protocols import models as protocols_models  # noqa: F401
+from app.protocols.router import router as protocols_router
+from app.triage import models as triage_models  # noqa: F401
+from app.triage.router import router as triage_router
+from app.users import models as users_models  # noqa: F401
+from app.users.router import router as users_router
 
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        Base.metadata.create_all(bind=engine)
+    except SQLAlchemyError:
+        logger.exception("Database table creation failed during startup")
+        raise
+
+    yield
 
 
 app = FastAPI(
     title="CareContinuum API",
     description="Offline AI downtime OS for hospital clinical workflows",
     version="0.1.0",
+    lifespan=lifespan,
 )
-
-Base.metadata.create_all(bind=engine)
 
 app.include_router(users_router)
 app.include_router(patients_router)
