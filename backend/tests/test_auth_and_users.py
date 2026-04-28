@@ -36,3 +36,10 @@ def test_protected_patient_list_requires_bearer_token(client):
     response = client.get("/patients/")
 
     assert response.status_code == 401
+
+
+def test_me_returns_authenticated_user(client, auth_headers):
+    response = client.get("/auth/me", headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.json()["staff_code"] == "DOC-TEST"

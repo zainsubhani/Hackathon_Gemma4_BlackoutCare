@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UrgencyLevel(str, Enum):
@@ -34,6 +34,8 @@ class TriageCaseUpdateStatus(BaseModel):
 
 
 class TriageCaseResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     patient_id: int
     created_by: int
@@ -44,6 +46,3 @@ class TriageCaseResponse(BaseModel):
     status: CaseStatus
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True

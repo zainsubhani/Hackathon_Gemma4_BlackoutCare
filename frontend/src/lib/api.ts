@@ -1,0 +1,144 @@
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+export type BackendStatus = {
+  api: string;
+  database: string;
+  ollama: string;
+  mode: string;
+};
+
+export type Patient = {
+  id: number;
+  patient_code: string;
+  full_name: string | null;
+  age: number | null;
+  gender: "male" | "female" | "other" | "unknown";
+  allergy_status: "unknown" | "none" | "known";
+  known_conditions: string | null;
+  current_medications: string | null;
+  created_at: string;
+};
+
+export type TriageCase = {
+  id: number;
+  patient_id: number;
+  created_by: number;
+  chief_complaint: string;
+  symptoms: string | null;
+  vitals: string | null;
+  urgency_level: "critical" | "urgent" | "stable" | "unassigned";
+  status: "active" | "monitoring" | "escalated" | "closed";
+  created_at: string;
+  updated_at: string;
+};
+
+export type Protocol = {
+  id: number;
+  title: string;
+  category: string;
+  trigger_keywords: string;
+  content: string;
+  version: string;
+  created_at: string;
+};
+
+export type ProtocolSearchResult = {
+  id: number;
+  title: string;
+  category: string;
+  matched_keywords: string[];
+  confidence_score: number;
+  confidence_label: string;
+};
+
+export type AuditEvent = {
+  id: number;
+  case_id: number | null;
+  actor_id: number | null;
+  event_type: string;
+  event_data: string | null;
+  created_at: string;
+};
+
+export type User = {
+  id: number;
+  full_name: string;
+  role: "doctor" | "nurse" | "admin" | "coordinator";
+  department: string | null;
+  staff_code: string;
+  created_at: string;
+};
+
+export type DowntimeReport = {
+  export_type: string;
+  generated_at: string;
+  hospital_name: string;
+  summary: {
+    total_patients: number;
+    total_triage_cases: number;
+    total_ai_recommendations: number;
+    total_events: number;
+    critical_triage_cases: number;
+  };
+  patients: Patient[];
+  triage_cases: TriageCase[];
+  event_timeline: unknown[];
+};
+
+export function getToken() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("access_token");
+}
+
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const headers = new Headers(options.headers);
+
+  if (!headers.has("Content-Type") && options.body) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    let message = "Request failed";
+    try {
+      const body = await response.json();
+      message = body.detail || message;
+    } catch {
+      message = response.statusText || message;
+    }
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export function formatDateTime(value: string | null | undefined) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+export function titleCase(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}

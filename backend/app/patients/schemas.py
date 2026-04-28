@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class Gender(str, Enum):
@@ -33,6 +33,8 @@ class PatientCreate(BaseModel):
 
 
 class PatientResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     patient_code: str
     full_name: str | None = None
@@ -42,6 +44,3 @@ class PatientResponse(BaseModel):
     known_conditions: str | None = None
     current_medications: str | None = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True

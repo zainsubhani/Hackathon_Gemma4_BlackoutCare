@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProtocolCreate(BaseModel):
@@ -11,6 +11,8 @@ class ProtocolCreate(BaseModel):
 
 
 class ProtocolResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     category: str
@@ -19,8 +21,6 @@ class ProtocolResponse(BaseModel):
     version: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
 
 
 class ProtocolSearchRequest(BaseModel):

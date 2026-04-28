@@ -20,6 +20,7 @@ from app.triage.router import router as triage_router
 from app.users import models as users_models  # noqa: F401
 from app.users.router import router as users_router
 from app.auth.router import router as auth_router
+from app.dashboard.router import router as dashboard_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -72,6 +73,7 @@ app.include_router(events_router)
 app.include_router(protocols_router)
 app.include_router(exports_router)
 app.include_router(auth_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/health")

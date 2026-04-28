@@ -1,0 +1,63 @@
+def test_dashboard_summary_counts_resources(client, auth_headers):
+    patient_response = client.post(
+        "/patients/",
+        headers=auth_headers,
+        json={
+            "patient_code": "P-SUMMARY-1",
+            "full_name": "Summary Patient",
+            "age": 45,
+            "gender": "female",
+            "allergy_status": "unknown",
+        },
+    )
+    assert patient_response.status_code == 200
+
+    case_response = client.post(
+        "/triage/cases/",
+        headers=auth_headers,
+        json={
+            "patient_id": patient_response.json()["id"],
+            "created_by": 0,
+            "chief_complaint": "Chest pain",
+            "urgency_level": "critical",
+            "status": "active",
+        },
+    )
+    assert case_response.status_code == 200
+
+    protocol_response = client.post(
+        "/users/",
+        json={
+            "full_name": "Admin User",
+            "role": "admin",
+            "department": "Operations",
+            "staff_code": "ADMIN-SUM",
+            "password": "password123",
+        },
+    )
+    assert protocol_response.status_code == 200
+    admin_login = client.post(
+        "/auth/login",
+        json={"staff_code": "ADMIN-SUM", "password": "password123"},
+    )
+    admin_headers = {"Authorization": f"Bearer {admin_login.json()['access_token']}"}
+
+    client.post(
+        "/protocols/",
+        headers=admin_headers,
+        json={
+            "title": "Summary Protocol",
+            "category": "emergency",
+            "trigger_keywords": "chest pain",
+            "content": "Assess airway, breathing, and circulation.",
+            "version": "v1",
+        },
+    )
+
+    response = client.get("/dashboard/summary", headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.json()["patients"] == 1
+    assert response.json()["triage_cases"] == 1
+    assert response.json()["critical_active_cases"] == 1
+    assert response.json()["protocols"] == 1
