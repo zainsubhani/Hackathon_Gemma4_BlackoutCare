@@ -74,3 +74,18 @@ def update_triage_case_status(
         payload.status,
         actor_id=current_user.id,
     )
+
+
+@router.patch("/{case_id}", response_model=schemas.TriageCaseResponse)
+def update_triage_case(
+    case_id: int,
+    payload: schemas.TriageCaseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return crud.update_triage_case(
+        db,
+        case_id,
+        payload,
+        actor_id=current_user.id,
+    )

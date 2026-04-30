@@ -87,10 +87,12 @@ def health_check():
 
 @app.get("/status")
 def status_check():
+    ollama_status = _ollama_status()
     return {
         "api": "ok",
         "database": _database_status(),
-        "ollama": _ollama_status(),
+        "ollama": ollama_status,
+        "ollama_model": settings.OLLAMA_MODEL,
         "mode": "downtime-ready",
     }
 
@@ -110,7 +112,11 @@ def _ollama_status() -> str:
         tags_url = settings.OLLAMA_URL.replace("/api/generate", "/api/tags")
         response = requests.get(tags_url, timeout=2)
         response.raise_for_status()
+        models = response.json().get("models", [])
+        model_names = {model.get("name") for model in models}
+        if settings.OLLAMA_MODEL not in model_names:
+            return "model_missing"
         return "ok"
-    except requests.RequestException:
+    except (ValueError, requests.RequestException):
         logger.info("Ollama status check failed")
         return "unavailable"

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.security import hash_password
 from app.events.crud import create_event
 from app.users.models import User
-from app.users.schemas import UserCreate
+from app.users.schemas import UserCreate, UserUpdate
 
 
 def get_user_by_staff_code(db: Session, staff_code: str):
@@ -67,3 +67,40 @@ def get_users(
 
 def get_user(db: Session, user_id: int):
     return db.query(User).filter(User.id == user_id).first()
+
+
+def update_user(db: Session, user_id: int, payload: UserUpdate):
+    db_user = get_user(db, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    if "staff_code" in update_data and update_data["staff_code"] != db_user.staff_code:
+        existing_user = get_user_by_staff_code(db, update_data["staff_code"])
+        if existing_user:
+            raise HTTPException(
+                status_code=409,
+                detail=f"User with staff_code '{update_data['staff_code']}' already exists",
+            )
+
+    if "password" in update_data:
+        password = update_data.pop("password")
+        if password:
+            db_user.hashed_password = hash_password(password)
+
+    for field, value in update_data.items():
+        setattr(db_user, field, value)
+
+    db.commit()
+    db.refresh(db_user)
+    create_event(
+        db=db,
+        event_type="USER_UPDATED",
+        actor_id=db_user.id,
+        event_data={
+            "user_id": db_user.id,
+            "staff_code": db_user.staff_code,
+            "role": db_user.role,
+        },
+    )
+    return db_user

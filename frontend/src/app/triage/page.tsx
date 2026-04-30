@@ -1,6 +1,6 @@
 "use client";
 
-import { API_URL, apiFetch, formatDateTime, getToken, titleCase, type Patient, type TriageCase } from "@/lib/api";
+import { API_URL, apiFetch, formatDateTime, getToken, titleCase, type AIAnalysisResult, type Patient, type TriageCase } from "@/lib/api";
 import { ChevronDown, Filter, Plus, UserRound } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -10,7 +10,8 @@ export default function TriagePage() {
   const [cases, setCases] = useState<TriageCase[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedCase, setSelectedCase] = useState<TriageCase | null>(null);
-  const [analysis, setAnalysis] = useState("");
+  const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(null);
+  const [analysisError, setAnalysisError] = useState("");
   const [urgency, setUrgency] = useState("");
   const [status, setStatus] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -19,6 +20,7 @@ export default function TriagePage() {
   const [analyzing, setAnalyzing] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ patient_id: "", chief_complaint: "", symptoms: "", vitals: "", urgency_level: "unassigned", status: "active" });
+  const [editForm, setEditForm] = useState({ chief_complaint: "", symptoms: "", vitals: "", urgency_level: "unassigned", status: "active" });
 
   const patientsById = useMemo(() => new Map(patients.map((patient) => [patient.id, patient])), [patients]);
 
@@ -96,9 +98,18 @@ export default function TriagePage() {
   }
 
   async function selectCase(caseId: number) {
-    setAnalysis("");
+    setAnalysis(null);
+    setAnalysisError("");
     try {
-      setSelectedCase(await apiFetch<TriageCase>(`/triage/cases/${caseId}`));
+      const data = await apiFetch<TriageCase>(`/triage/cases/${caseId}`);
+      setSelectedCase(data);
+      setEditForm({
+        chief_complaint: data.chief_complaint,
+        symptoms: data.symptoms || "",
+        vitals: data.vitals || "",
+        urgency_level: data.urgency_level,
+        status: data.status,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load triage case");
     }
@@ -116,14 +127,41 @@ export default function TriagePage() {
 
   async function analyzeCase(caseId: number) {
     setAnalyzing(caseId);
-    setAnalysis("");
+    setAnalysis(null);
+    setAnalysisError("");
     try {
-      const result = await apiFetch<Record<string, unknown>>(`/triage/cases/${caseId}/analyze`, { method: "POST" });
-      setAnalysis(JSON.stringify(result, null, 2));
+      const result = await apiFetch<AIAnalysisResult>(`/triage/cases/${caseId}/analyze`, { method: "POST" });
+      setAnalysis(result);
     } catch (err) {
-      setAnalysis(err instanceof Error ? err.message : "Unable to analyze case");
+      setAnalysisError(err instanceof Error ? err.message : "Unable to analyze case");
     } finally {
       setAnalyzing(null);
+    }
+  }
+
+  async function saveCaseEdits(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedCase) return;
+
+    setSaving(true);
+    setError("");
+    try {
+      const updated = await apiFetch<TriageCase>(`/triage/cases/${selectedCase.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          chief_complaint: editForm.chief_complaint,
+          symptoms: editForm.symptoms || null,
+          vitals: editForm.vitals || null,
+          urgency_level: editForm.urgency_level,
+          status: editForm.status,
+        }),
+      });
+      setSelectedCase(updated);
+      setCases((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update triage case");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -221,11 +259,59 @@ export default function TriagePage() {
               <Detail label="Symptoms" value={selectedCase.symptoms || "-"} />
               <Detail label="Vitals" value={selectedCase.vitals || "-"} />
             </div>
-            {analysis && <pre className="mt-5 max-h-80 overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-5 text-slate-100">{analysis}</pre>}
+            <form onSubmit={saveCaseEdits} className="mt-5 grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+              <Input label="Chief Complaint" value={editForm.chief_complaint} onChange={(value) => setEditForm({ ...editForm, chief_complaint: value })} required />
+              <Select label="Urgency" value={editForm.urgency_level} onChange={(value) => setEditForm({ ...editForm, urgency_level: value })} options={["unassigned", "stable", "urgent", "critical"]} />
+              <Select label="Status" value={editForm.status} onChange={(value) => setEditForm({ ...editForm, status: value })} options={["active", "monitoring", "escalated", "closed"]} />
+              <Input label="Symptoms" value={editForm.symptoms} onChange={(value) => setEditForm({ ...editForm, symptoms: value })} />
+              <Input label="Vitals" value={editForm.vitals} onChange={(value) => setEditForm({ ...editForm, vitals: value })} />
+              <div className="flex items-end">
+                <button disabled={saving} className="h-11 w-full rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800 disabled:opacity-60">{saving ? "Saving..." : "Save Changes"}</button>
+              </div>
+            </form>
+            {analysisError && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">{analysisError}</div>}
+            {analysis && <AnalysisPanel analysis={analysis} />}
           </section>
         )}
       </div>
     </DashboardShell>
+  );
+}
+
+function AnalysisPanel({ analysis }: { analysis: AIAnalysisResult }) {
+  const output = analysis.ai_output;
+  return (
+    <section className="mt-5 rounded-xl border border-teal-100 bg-teal-50/60 p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.12em] text-teal-700">AI Recommendation</p>
+          <h3 className="mt-2 text-xl font-black">{titleCase(output.urgency || "unassigned")} urgency</h3>
+        </div>
+        <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-slate-600">Confidence: {titleCase(output.confidence || "low")}</span>
+      </div>
+      <p className="mt-4 leading-7 text-slate-700">{output.risk_summary || "No summary returned."}</p>
+      <div className="mt-5 grid gap-5 md:grid-cols-2">
+        <ListBlock title="Recommended Actions" items={output.recommended_actions || []} />
+        <ListBlock title="Warnings" items={output.warnings || []} tone="red" />
+        <ListBlock title="Protocol Reasoning" items={output.protocol_reasoning || []} />
+        <Detail label="Source" value={output.source || "fallback"} />
+      </div>
+    </section>
+  );
+}
+
+function ListBlock({ title, items, tone = "slate" }: { title: string; items: string[]; tone?: "slate" | "red" }) {
+  return (
+    <div>
+      <p className={`text-sm font-black ${tone === "red" ? "text-red-700" : "text-slate-700"}`}>{title}</p>
+      {items.length > 0 ? (
+        <ul className="mt-2 grid gap-2 text-sm leading-6 text-slate-700">
+          {items.map((item) => <li key={item}>- {item}</li>)}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-slate-500">None returned.</p>
+      )}
+    </div>
   );
 }
 

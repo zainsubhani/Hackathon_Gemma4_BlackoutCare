@@ -1,4 +1,8 @@
-def test_protocol_search_returns_keyword_matches(client, auth_headers):
+from app.users import crud as user_crud
+from app.users.schemas import UserCreate
+
+
+def test_protocol_search_returns_keyword_matches(client, db_session, auth_headers):
     create_response = client.post(
         "/protocols/",
         headers=auth_headers,
@@ -12,17 +16,16 @@ def test_protocol_search_returns_keyword_matches(client, auth_headers):
     )
     assert create_response.status_code == 403
 
-    admin_response = client.post(
-        "/users/",
-        json={
-            "full_name": "Admin User",
-            "role": "admin",
-            "department": "Operations",
-            "staff_code": "ADMIN-1",
-            "password": "password123",
-        },
+    user_crud.create_user(
+        db_session,
+        UserCreate(
+            full_name="Admin User",
+            role="admin",
+            department="Operations",
+            staff_code="ADMIN-1",
+            password="password123",
+        ),
     )
-    assert admin_response.status_code == 200
 
     login_response = client.post(
         "/auth/login",

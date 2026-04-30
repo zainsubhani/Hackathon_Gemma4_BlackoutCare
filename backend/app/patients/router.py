@@ -46,3 +46,13 @@ def get_patient(
         raise HTTPException(status_code=404, detail="Patient not found")
 
     return patient
+
+
+@router.patch("/{patient_id}", response_model=schemas.PatientResponse)
+def update_patient(
+    patient_id: int,
+    payload: schemas.PatientUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return crud.update_patient(db, patient_id, payload, actor_id=current_user.id)

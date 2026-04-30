@@ -55,6 +55,30 @@ def get_protocol(
     return protocol
 
 
+@router.patch("/{protocol_id}", response_model=schemas.ProtocolResponse)
+def update_protocol(
+    protocol_id: int,
+    payload: schemas.ProtocolUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("admin", "coordinator")),
+):
+    protocol = crud.update_protocol(db, protocol_id, payload)
+    if not protocol:
+        raise HTTPException(status_code=404, detail="Protocol not found")
+
+    create_event(
+        db=db,
+        event_type="PROTOCOL_UPDATED",
+        actor_id=current_user.id,
+        event_data={
+            "protocol_id": protocol.id,
+            "title": protocol.title,
+            "category": protocol.category,
+        },
+    )
+    return protocol
+
+
 @router.post("/search")
 def search_protocols(
     payload: schemas.ProtocolSearchRequest,

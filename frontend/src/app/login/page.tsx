@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, Brain, Building2, Eye, FileText, Lock, ShieldCheck, Siren, UserRound, WifiOff } from "lucide-react";
+import { Activity, Brain, Eye, FileText, Lock, ShieldCheck, Siren, UserRound, WifiOff } from "lucide-react";
 import { useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
@@ -175,23 +174,6 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
-
-          <div className="my-6 flex items-center gap-4 sm:my-8">
-            <div className="h-px flex-1 bg-slate-200" />
-            <span className="text-sm text-slate-500">or</span>
-            <div className="h-px flex-1 bg-slate-200" />
-          </div>
-
-          <Link
-            href="/dashboard"
-            className="flex items-center justify-center gap-3 rounded-xl border border-slate-300 px-4 py-3 hover:bg-slate-50 sm:gap-4 sm:px-5 sm:py-4"
-          >
-            <Building2 className="shrink-0 text-slate-700" />
-            <div className="min-w-0">
-              <p className="font-bold">Use Offline Access</p>
-              <p className="text-sm text-slate-500">Continue with limited access</p>
-            </div>
-          </Link>
 
           <div className="mt-6 flex gap-3 rounded-2xl bg-slate-50 p-4 sm:mt-8 sm:gap-4 sm:p-5">
             <ShieldCheck className="mt-1 shrink-0 text-slate-500" />

@@ -1,6 +1,11 @@
-from app.ai import models as ai_models  # noqa: F401
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from app.ai import models as ai_models 
 from app.core.database import Base, SessionLocal, engine
-from app.events import models as events_models  # noqa: F401
+from app.events import models as events_models 
 from app.main import ensure_development_schema
 from app.patients import crud as patient_crud
 from app.patients.schemas import AllergyStatus, Gender, PatientCreate

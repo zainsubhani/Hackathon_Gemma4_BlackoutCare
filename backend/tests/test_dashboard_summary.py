@@ -1,4 +1,8 @@
-def test_dashboard_summary_counts_resources(client, auth_headers):
+from app.users import crud as user_crud
+from app.users.schemas import UserCreate
+
+
+def test_dashboard_summary_counts_resources(client, db_session, auth_headers):
     patient_response = client.post(
         "/patients/",
         headers=auth_headers,
@@ -25,17 +29,16 @@ def test_dashboard_summary_counts_resources(client, auth_headers):
     )
     assert case_response.status_code == 200
 
-    protocol_response = client.post(
-        "/users/",
-        json={
-            "full_name": "Admin User",
-            "role": "admin",
-            "department": "Operations",
-            "staff_code": "ADMIN-SUM",
-            "password": "password123",
-        },
+    user_crud.create_user(
+        db_session,
+        UserCreate(
+            full_name="Admin User",
+            role="admin",
+            department="Operations",
+            staff_code="ADMIN-SUM",
+            password="password123",
+        ),
     )
-    assert protocol_response.status_code == 200
     admin_login = client.post(
         "/auth/login",
         json={"staff_code": "ADMIN-SUM", "password": "password123"},

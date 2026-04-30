@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.patients.models import Patient
 from app.users.models import User
 from app.triage.models import TriageCase
-from app.triage.schemas import TriageCaseCreate, CaseStatus
+from app.triage.schemas import TriageCaseCreate, CaseStatus, TriageCaseUpdate
 from app.events.crud import create_event
 
 
@@ -94,4 +94,32 @@ def update_triage_case_status(
         "new_status": status.value,
     },
 )
+    return db_case
+
+
+def update_triage_case(
+    db: Session,
+    case_id: int,
+    payload: TriageCaseUpdate,
+    actor_id: int | None = None,
+):
+    db_case = get_triage_case(db, case_id)
+    if not db_case:
+        raise HTTPException(status_code=404, detail="Triage case not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        if hasattr(value, "value"):
+            value = value.value
+        setattr(db_case, field, value)
+
+    db.commit()
+    db.refresh(db_case)
+    create_event(
+        db=db,
+        event_type="TRIAGE_CASE_UPDATED",
+        actor_id=actor_id,
+        case_id=db_case.id,
+        event_data=update_data,
+    )
     return db_case

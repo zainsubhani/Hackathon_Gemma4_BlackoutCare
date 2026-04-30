@@ -1,8 +1,8 @@
-# CareContinuum Backend
+# CareContinuum
 
-CareContinuum is a FastAPI backend for an offline hospital downtime copilot. It is designed for scenarios where clinical teams lose access to normal hospital systems during outages, cyberattacks, or degraded network conditions.
+CareContinuum is a full-stack offline hospital downtime copilot. It is designed for scenarios where clinical teams lose access to normal hospital systems during outages, cyberattacks, or degraded network conditions.
 
-The backend provides structured downtime workflows for users, patients, triage cases, clinical protocols, AI-assisted recommendations, audit events, and recovery exports.
+The project includes a FastAPI backend and a Next.js frontend for structured downtime workflows: users, patients, triage cases, clinical protocols, AI-assisted recommendations, audit events, staff administration, and recovery exports.
 
 ## Problem
 
@@ -20,6 +20,17 @@ CareContinuum addresses this gap by providing a local-first API that supports:
 This project does not replace clinicians, hospital policy, or EHR systems. It is decision-support software for maintaining structure under uncertainty.
 
 ## Core Capabilities
+
+### Frontend Operations Console
+
+- Protected dashboard routes with JWT session checks
+- Shared clinical dashboard shell with sidebar, topbar, system status, and sign out
+- Patient registry and patient creation
+- Triage case creation, status updates, AI analysis, and per-case exports
+- Protocol creation and protocol keyword search
+- Audit event review and case-specific audit lookup
+- Full downtime report exports in JSON and PDF
+- Staff administration for user listing and creation
 
 ### Authentication
 
@@ -82,9 +93,25 @@ The backend records audit events for important actions, including:
 
 ## Architecture
 
-The backend follows a feature-oriented FastAPI structure:
+The project is split into backend and frontend applications:
 
 ```text
+frontend/
+  src/
+    app/
+      login/
+      dashboard/
+      patients/
+      triage/
+      protocols/
+      audit/
+      exports/
+      staff/
+    components/
+      DashboardShell.tsx
+    lib/
+      api.ts
+
 backend/
   app/
     auth/
@@ -130,6 +157,8 @@ backend/
       router.py
       service.py
       pdf_generators.py
+    dashboard/
+      router.py
     main.py
   scripts/
     seed_demo.py
@@ -158,6 +187,10 @@ backend/
 - python-jose for JWT handling
 - Passlib and bcrypt for password hashing
 - Docker Compose for local infrastructure
+- Next.js App Router
+- React
+- Tailwind CSS
+- lucide-react icons
 
 ## Environment Variables
 
@@ -173,6 +206,8 @@ OLLAMA_TIMEOUT_SECONDS=30
 ```
 
 ## Local Setup
+
+### Backend
 
 From the repository root:
 
@@ -190,6 +225,34 @@ API documentation will be available at:
 http://127.0.0.1:8000/docs
 ```
 
+### Frontend
+
+From the repository root:
+
+```bash
+cd frontend
+npm install
+npm run dev -- --hostname 127.0.0.1
+```
+
+The frontend will be available at:
+
+```text
+http://127.0.0.1:3000
+```
+
+The frontend uses the following backend URL by default:
+
+```text
+http://127.0.0.1:8000
+```
+
+To override it, create `frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
 ## Docker Setup
 
 From the repository root:
@@ -203,7 +266,14 @@ This starts:
 - PostgreSQL on host port `5433`
 - Ollama on host port `11434`
 - Backend on host port `8000`
+- Frontend on host port `3000`
 - A helper service that pulls the configured Gemma model
+
+Run migrations manually from `backend/` when you want to manage schema changes through Alembic:
+
+```bash
+./.venv/bin/alembic upgrade head
+```
 
 ## Seed Demo Data
 
@@ -251,23 +321,40 @@ Use the returned token as:
 Authorization: Bearer <access_token>
 ```
 
+The frontend stores this token as `access_token` and validates protected routes through:
+
+```text
+GET /auth/me
+```
+
 ## Important Endpoints
 
 ```text
 GET    /health
 GET    /status
 POST   /auth/login
+GET    /auth/me
 POST   /users/
+GET    /users/
+GET    /users/{user_id}
+GET    /dashboard/summary
 GET    /patients/
 POST   /patients/
+GET    /patients/{patient_id}
+GET    /triage/cases/
 POST   /triage/cases/
+GET    /triage/cases/{case_id}
 POST   /triage/cases/{case_id}/analyze
 PATCH  /triage/cases/{case_id}/status
+GET    /protocols/
 POST   /protocols/
+GET    /protocols/{protocol_id}
 POST   /protocols/search
 GET    /events/
+GET    /events/case/{case_id}
 GET    /exports/downtime-report
 GET    /exports/downtime-report/pdf
+GET    /exports/triage-case/{case_id}
 GET    /exports/triage-case/{case_id}/pdf
 ```
 
@@ -293,7 +380,13 @@ CareContinuum intentionally frames AI responses as decision support:
 
 ## Current Engineering Status
 
-The backend is hackathon-demo ready. It includes authentication, local AI integration, audit logging, exports, Dockerized infrastructure, and a focused pytest suite.
+CareContinuum is hackathon-demo ready. It includes authentication, protected frontend workflows, local AI integration, audit logging, exports, Dockerized backend infrastructure, and a focused pytest suite.
+
+Frontend workflow documentation is available in:
+
+```text
+frontend/README.md
+```
 
 Testing documentation is available in:
 
@@ -303,10 +396,13 @@ TESTING_README.md
 
 Recommended next engineering improvements:
 
-- Replace `Base.metadata.create_all()` and startup schema patching with Alembic migrations.
+- Replace startup `Base.metadata.create_all()` fallback with Alembic-only startup.
 - Expand pytest coverage for invalid tokens, pagination, and report contents.
 - Add request/response examples for every endpoint.
+- Move JWT storage from `localStorage` to secure httpOnly cookies.
+- Add route middleware for server-side frontend auth checks.
+- Generate frontend TypeScript types from the backend OpenAPI schema.
 
 ## Project Positioning
 
-CareContinuum demonstrates backend design for resilient healthcare workflows under downtime conditions. It combines local-first infrastructure, structured clinical workflow modeling, auditability, and protocol-grounded AI assistance in a way that is practical for a hackathon demo and extensible toward a production-grade system.
+CareContinuum demonstrates a full-stack approach to resilient healthcare workflows under downtime conditions. It combines a protected clinical operations UI, local-first backend infrastructure, structured workflow modeling, auditability, and protocol-grounded AI assistance in a way that is practical for a hackathon demo and extensible toward a production-grade system.

@@ -7,6 +7,7 @@ from app.core.security import decode_access_token
 from app.users.models import User
 
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
@@ -33,6 +34,26 @@ def get_current_user(
         )
 
     return user
+
+
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_security),
+    db: Session = Depends(get_db),
+):
+    if credentials is None:
+        return None
+
+    token = credentials.credentials
+    payload = decode_access_token(token)
+
+    if not payload:
+        return None
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        return None
+
+    return db.query(User).filter(User.id == int(user_id)).first()
 
 
 def require_roles(*allowed_roles: str):

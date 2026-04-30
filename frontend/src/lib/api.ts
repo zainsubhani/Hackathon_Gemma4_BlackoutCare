@@ -4,6 +4,7 @@ export type BackendStatus = {
   api: string;
   database: string;
   ollama: string;
+  ollama_model?: string;
   mode: string;
 };
 
@@ -85,6 +86,20 @@ export type DowntimeReport = {
   event_timeline: unknown[];
 };
 
+export type AIAnalysisResult = {
+  recommendation_id: number;
+  case_id: number;
+  ai_output: {
+    urgency?: string;
+    risk_summary?: string;
+    recommended_actions?: string[];
+    warnings?: string[];
+    confidence?: string;
+    source?: string;
+    protocol_reasoning?: string[];
+  };
+};
+
 export function getToken() {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("access_token");
@@ -111,7 +126,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     let message = "Request failed";
     try {
       const body = await response.json();
-      message = body.detail || message;
+      message = formatApiError(body.detail) || message;
     } catch {
       message = response.statusText || message;
     }
@@ -119,6 +134,26 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   }
 
   return response.json() as Promise<T>;
+}
+
+function formatApiError(detail: unknown): string {
+  if (!detail) return "";
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return detail.map(formatApiError).filter(Boolean).join("; ");
+  if (typeof detail === "object") {
+    const data = detail as Record<string, unknown>;
+    const parts = [
+      typeof data.message === "string" ? data.message : "",
+      typeof data.reason === "string" ? data.reason : "",
+    ].filter(Boolean);
+
+    if (Array.isArray(data.safe_fallback)) {
+      parts.push(`Fallback: ${data.safe_fallback.join(" ")}`);
+    }
+
+    return parts.join(" ");
+  }
+  return String(detail);
 }
 
 export function formatDateTime(value: string | null | undefined) {

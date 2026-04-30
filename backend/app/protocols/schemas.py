@@ -10,6 +10,14 @@ class ProtocolCreate(BaseModel):
     version: str = "v1"
 
 
+class ProtocolUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=3, max_length=200)
+    category: str | None = Field(default=None, min_length=2, max_length=100)
+    trigger_keywords: str | None = Field(default=None, min_length=2, max_length=500)
+    content: str | None = Field(default=None, min_length=10)
+    version: str | None = None
+
+
 class ProtocolResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

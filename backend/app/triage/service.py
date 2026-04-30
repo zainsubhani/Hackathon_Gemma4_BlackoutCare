@@ -1,3 +1,5 @@
+import logging
+
 import requests
 
 from fastapi import HTTPException
@@ -9,6 +11,9 @@ from app.events.crud import create_event
 from app.patients.models import Patient
 from app.protocols.crud import search_protocols
 from app.triage.crud import get_triage_case
+
+
+logger = logging.getLogger(__name__)
 
 
 def analyze_triage_case(db: Session, case_id: int):
@@ -28,6 +33,7 @@ def analyze_triage_case(db: Session, case_id: int):
         raw_response = call_gemma(prompt)
         parsed_response = parse_gemma_json(raw_response)
     except (requests.RequestException, ValueError, KeyError) as exc:
+        logger.exception("AI recommendation failed for triage case %s", case_id)
         create_event(
             db=db,
             event_type="AI_RECOMMENDATION_FAILED",
@@ -35,17 +41,21 @@ def analyze_triage_case(db: Session, case_id: int):
             case_id=case_id,
             event_data={"reason": str(exc), "protocol_count": len(protocol_data)},
         )
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "message": "AI recommendation service unavailable",
-                "safe_fallback": [
-                    "Continue downtime protocol workflow manually.",
-                    "Escalate to the responsible clinician for urgent review.",
-                    "Document missing data and uncertainty in the patient record.",
-                ],
-            },
-        )
+        detail = {
+            "message": "AI recommendation service unavailable",
+            "safe_fallback": [
+                "Continue downtime protocol workflow manually.",
+                "Escalate to the responsible clinician for urgent review.",
+                "Document missing data and uncertainty in the patient record.",
+            ],
+        }
+
+        from app.core.config import settings
+
+        if settings.APP_ENV == "development":
+            detail["reason"] = str(exc)
+
+        raise HTTPException(status_code=503, detail=detail)
 
     saved_recommendation = create_ai_recommendation(
         db=db,

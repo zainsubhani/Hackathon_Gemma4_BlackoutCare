@@ -33,6 +33,14 @@ class TriageCaseUpdateStatus(BaseModel):
     status: CaseStatus
 
 
+class TriageCaseUpdate(BaseModel):
+    chief_complaint: str | None = Field(default=None, min_length=2, max_length=200)
+    symptoms: str | None = Field(default=None, max_length=1000)
+    vitals: str | None = Field(default=None, max_length=1000)
+    urgency_level: UrgencyLevel | None = None
+    status: CaseStatus | None = None
+
+
 class TriageCaseResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

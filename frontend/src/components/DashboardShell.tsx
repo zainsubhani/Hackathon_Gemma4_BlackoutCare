@@ -27,7 +27,7 @@ const navItems = [
   { label: "Protocols", icon: BookOpen, href: "/protocols", section: "protocols" },
   { label: "Audit Log", icon: ClipboardList, href: "/audit", section: "audit" },
   { label: "Exports", icon: Download, href: "/exports", section: "exports" },
-  { label: "Staff", icon: UserCog, href: "/staff", section: "staff" },
+  { label: "Staff", icon: UserCog, href: "/staff", section: "staff", roles: ["admin", "coordinator"] },
 ];
 
 export type DashboardSection =
@@ -103,6 +103,11 @@ export function DashboardShell({
     router.replace("/login");
   }
 
+  const visibleNavItems = navItems.filter((item) => {
+    if (!("roles" in item) || !item.roles) return true;
+    return currentUser ? item.roles.includes(currentUser.role) : false;
+  });
+
   if (checkingAuth) {
     return (
       <main className="flex min-h-svh items-center justify-center bg-slate-50 text-slate-600">
@@ -137,7 +142,7 @@ export function DashboardShell({
           </div>
 
           <nav className="grid gap-2 px-5">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavItem key={item.section} {...item} active={item.section === active} />
             ))}
           </nav>
@@ -214,7 +219,7 @@ export function DashboardShell({
               </div>
 
               <nav className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
-                {navItems.map((item) => (
+                {visibleNavItems.map((item) => (
                   <MobileNavItem key={item.section} {...item} active={item.section === active} />
                 ))}
               </nav>
@@ -229,12 +234,12 @@ export function DashboardShell({
 }
 
 function StatusPill({ status }: { status: BackendStatus | null }) {
-  const online = status?.api === "ok" && status?.database === "ok";
+  const online = status?.api === "ok" && status?.database === "ok" && status?.ollama === "ok";
 
   return (
     <div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${online ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
       <Wifi className="h-4 w-4" />
-      {online ? "System Online" : "System Degraded"}
+      {online ? "System Online" : status?.ollama === "model_missing" ? "AI Model Missing" : "System Degraded"}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.protocols.models import Protocol
-from app.protocols.schemas import ProtocolCreate
+from app.protocols.schemas import ProtocolCreate, ProtocolUpdate
 
 
 def create_protocol(db: Session, protocol: ProtocolCreate):
@@ -33,6 +33,22 @@ def get_protocols(
 
 def get_protocol(db: Session, protocol_id: int):
     return db.query(Protocol).filter(Protocol.id == protocol_id).first()
+
+
+def update_protocol(db: Session, protocol_id: int, payload: ProtocolUpdate):
+    db_protocol = get_protocol(db, protocol_id)
+    if not db_protocol:
+        return None
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        if field in {"category", "trigger_keywords"} and value is not None:
+            value = value.lower()
+        setattr(db_protocol, field, value)
+
+    db.commit()
+    db.refresh(db_protocol)
+    return db_protocol
 
 
 def search_protocols(db: Session, query: str):

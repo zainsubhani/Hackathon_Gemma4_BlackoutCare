@@ -32,6 +32,21 @@ class PatientCreate(BaseModel):
         return value.strip().upper()
 
 
+class PatientUpdate(BaseModel):
+    patient_code: str | None = Field(default=None, min_length=3, max_length=50)
+    full_name: str | None = Field(default=None, max_length=100)
+    age: int | None = Field(default=None, ge=0, le=130)
+    gender: Gender | None = None
+    allergy_status: AllergyStatus | None = None
+    known_conditions: str | None = Field(default=None, max_length=500)
+    current_medications: str | None = Field(default=None, max_length=500)
+
+    @field_validator("patient_code")
+    @classmethod
+    def normalize_optional_patient_code(cls, value: str | None) -> str | None:
+        return value.strip().upper() if value else value
+
+
 class PatientResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

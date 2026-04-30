@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.patients.models import Patient
-from app.patients.schemas import PatientCreate
+from app.patients.schemas import PatientCreate, PatientUpdate
 from app.events.crud import create_event
 
 
@@ -67,3 +67,43 @@ def get_patients(
 
 def get_patient(db: Session, patient_id: int):
     return db.query(Patient).filter(Patient.id == patient_id).first()
+
+
+def update_patient(
+    db: Session,
+    patient_id: int,
+    payload: PatientUpdate,
+    actor_id: int | None = None,
+):
+    db_patient = get_patient(db, patient_id)
+    if not db_patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    if (
+        "patient_code" in update_data
+        and update_data["patient_code"] != db_patient.patient_code
+        and get_patient_by_code(db, update_data["patient_code"])
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Patient with code '{update_data['patient_code']}' already exists",
+        )
+
+    for field, value in update_data.items():
+        if hasattr(value, "value"):
+            value = value.value
+        setattr(db_patient, field, value)
+
+    db.commit()
+    db.refresh(db_patient)
+    create_event(
+        db=db,
+        event_type="PATIENT_UPDATED",
+        actor_id=actor_id,
+        event_data={
+            "patient_id": db_patient.id,
+            "patient_code": db_patient.patient_code,
+        },
+    )
+    return db_patient

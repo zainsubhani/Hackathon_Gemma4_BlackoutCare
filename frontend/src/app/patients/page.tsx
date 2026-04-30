@@ -23,6 +23,15 @@ export default function PatientsPage() {
     known_conditions: "",
     current_medications: "",
   });
+  const [editForm, setEditForm] = useState({
+    patient_code: "",
+    full_name: "",
+    age: "",
+    gender: "unknown",
+    allergy_status: "unknown",
+    known_conditions: "",
+    current_medications: "",
+  });
 
   const visiblePatients = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -95,9 +104,46 @@ export default function PatientsPage() {
 
   async function selectPatient(patientId: number) {
     try {
-      setSelectedPatient(await apiFetch<Patient>(`/patients/${patientId}`));
+      const data = await apiFetch<Patient>(`/patients/${patientId}`);
+      setSelectedPatient(data);
+      setEditForm({
+        patient_code: data.patient_code,
+        full_name: data.full_name || "",
+        age: data.age ? String(data.age) : "",
+        gender: data.gender,
+        allergy_status: data.allergy_status,
+        known_conditions: data.known_conditions || "",
+        current_medications: data.current_medications || "",
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load patient");
+    }
+  }
+
+  async function updatePatient(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedPatient) return;
+    setSaving(true);
+    setError("");
+    try {
+      const updated = await apiFetch<Patient>(`/patients/${selectedPatient.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          patient_code: editForm.patient_code,
+          full_name: editForm.full_name || null,
+          age: editForm.age ? Number(editForm.age) : null,
+          gender: editForm.gender,
+          allergy_status: editForm.allergy_status,
+          known_conditions: editForm.known_conditions || null,
+          current_medications: editForm.current_medications || null,
+        }),
+      });
+      setSelectedPatient(updated);
+      setPatients((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update patient");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -187,6 +233,18 @@ export default function PatientsPage() {
               <Detail label="Known Conditions" value={selectedPatient.known_conditions || "-"} />
               <Detail label="Current Medications" value={selectedPatient.current_medications || "-"} />
             </div>
+            <form onSubmit={updatePatient} className="mt-6 grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2 xl:grid-cols-4">
+              <Input label="Patient Code" value={editForm.patient_code} onChange={(value) => setEditForm({ ...editForm, patient_code: value.toUpperCase() })} required />
+              <Input label="Full Name" value={editForm.full_name} onChange={(value) => setEditForm({ ...editForm, full_name: value })} />
+              <Input label="Age" type="number" value={editForm.age} onChange={(value) => setEditForm({ ...editForm, age: value })} />
+              <Select label="Gender" value={editForm.gender} onChange={(value) => setEditForm({ ...editForm, gender: value })} options={["unknown", "female", "male", "other"]} />
+              <Select label="Allergy Status" value={editForm.allergy_status} onChange={(value) => setEditForm({ ...editForm, allergy_status: value })} options={["unknown", "none", "known"]} />
+              <Input label="Known Conditions" value={editForm.known_conditions} onChange={(value) => setEditForm({ ...editForm, known_conditions: value })} />
+              <Input label="Current Medications" value={editForm.current_medications} onChange={(value) => setEditForm({ ...editForm, current_medications: value })} />
+              <div className="flex items-end">
+                <button disabled={saving} className="h-11 w-full rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800 disabled:opacity-60">{saving ? "Saving..." : "Save Changes"}</button>
+              </div>
+            </form>
           </section>
         )}
       </div>

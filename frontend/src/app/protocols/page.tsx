@@ -16,6 +16,7 @@ export default function ProtocolsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ title: "", category: "", trigger_keywords: "", content: "", version: "v1" });
+  const [editForm, setEditForm] = useState({ title: "", category: "", trigger_keywords: "", content: "", version: "v1" });
 
   const matchMap = useMemo(() => new Map(matches.map((match) => [match.id, match])), [matches]);
   const visibleProtocols = useMemo(() => {
@@ -99,9 +100,36 @@ export default function ProtocolsPage() {
 
   async function selectProtocol(protocolId: number) {
     try {
-      setSelectedProtocol(await apiFetch<Protocol>(`/protocols/${protocolId}`));
+      const data = await apiFetch<Protocol>(`/protocols/${protocolId}`);
+      setSelectedProtocol(data);
+      setEditForm({
+        title: data.title,
+        category: data.category,
+        trigger_keywords: data.trigger_keywords,
+        content: data.content,
+        version: data.version,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load protocol");
+    }
+  }
+
+  async function updateProtocol(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedProtocol) return;
+    setSaving(true);
+    setError("");
+    try {
+      const updated = await apiFetch<Protocol>(`/protocols/${selectedProtocol.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(editForm),
+      });
+      setSelectedProtocol(updated);
+      setProtocols((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update protocol");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -162,6 +190,19 @@ export default function ProtocolsPage() {
               <button onClick={() => setSelectedProtocol(null)} className="rounded-lg px-3 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100">Close</button>
             </div>
             <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-600">{selectedProtocol.content}</p>
+            <form onSubmit={updateProtocol} className="mt-6 grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+              <Input label="Title" value={editForm.title} onChange={(value) => setEditForm({ ...editForm, title: value })} required />
+              <Input label="Category" value={editForm.category} onChange={(value) => setEditForm({ ...editForm, category: value })} required />
+              <Input label="Trigger Keywords" value={editForm.trigger_keywords} onChange={(value) => setEditForm({ ...editForm, trigger_keywords: value })} required />
+              <Input label="Version" value={editForm.version} onChange={(value) => setEditForm({ ...editForm, version: value })} required />
+              <label className="grid gap-2 text-sm font-bold text-slate-700 md:col-span-2">
+                Content
+                <textarea required value={editForm.content} onChange={(event) => setEditForm({ ...editForm, content: event.target.value })} className="min-h-28 rounded-xl border border-slate-200 p-3 font-normal text-slate-900 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100" />
+              </label>
+              <div className="md:col-span-2">
+                <button disabled={saving} className="h-11 rounded-xl bg-slate-900 px-5 font-bold text-white hover:bg-slate-800 disabled:opacity-60">{saving ? "Saving..." : "Save Changes"}</button>
+              </div>
+            </form>
           </section>
         )}
       </div>

@@ -23,6 +23,19 @@ class UserCreate(BaseModel):
         return value.strip().upper()
 
 
+class UserUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=2, max_length=100)
+    role: UserRole | None = None
+    department: str | None = Field(default=None, max_length=100)
+    staff_code: str | None = Field(default=None, min_length=3, max_length=30)
+    password: str | None = Field(default=None, min_length=6, max_length=100)
+
+    @field_validator("staff_code")
+    @classmethod
+    def normalize_optional_staff_code(cls, value: str | None) -> str | None:
+        return value.strip().upper() if value else value
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
