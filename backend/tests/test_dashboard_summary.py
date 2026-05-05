@@ -21,7 +21,6 @@ def test_dashboard_summary_counts_resources(client, db_session, auth_headers):
         headers=auth_headers,
         json={
             "patient_id": patient_response.json()["id"],
-            "created_by": 0,
             "chief_complaint": "Chest pain",
             "urgency_level": "critical",
             "status": "active",

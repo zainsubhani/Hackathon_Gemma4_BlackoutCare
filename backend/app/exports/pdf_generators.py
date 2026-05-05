@@ -64,6 +64,24 @@ def generate_downtime_pdf(report: dict) -> BytesIO:
         story.append(Paragraph(f"Generated: {_text(report.get('generated_at'))}", body_style))
     story.append(Spacer(1, 12))
 
+    incident = report.get("incident")
+    if incident:
+        story.append(Paragraph("Downtime Incident", section_style))
+        incident_table = Table(
+            [
+                ["Name", _paragraph(incident.get("name"), body_style)],
+                ["Unit", _paragraph(incident.get("hospital_unit"), body_style)],
+                ["Status", _paragraph(incident.get("status"), body_style)],
+                ["Started", _paragraph(incident.get("started_at"), body_style)],
+                ["Ended", _paragraph(incident.get("ended_at"), body_style)],
+                ["Summary", _paragraph(incident.get("summary"), body_style)],
+            ],
+            colWidths=[1.6 * inch, 4.8 * inch],
+        )
+        incident_table.setStyle(_detail_table_style())
+        story.append(incident_table)
+        story.append(Spacer(1, 14))
+
     # Summary
     summary = report.get("summary", {})
 
@@ -150,6 +168,19 @@ def generate_downtime_pdf(report: dict) -> BytesIO:
         story.append(case_table)
         story.append(Spacer(1, 10))
 
+    case_notes = report.get("case_notes", [])
+    if case_notes:
+        story.append(Paragraph("Case Notes", section_style))
+        for note in case_notes:
+            story.append(
+                Paragraph(
+                    f"<b>{_text(note.get('created_at'))}</b> - Case #{_text(note.get('case_id'))} - {_text(note.get('note_type'))}",
+                    body_style,
+                )
+            )
+            story.append(Paragraph(_text(note.get("content")), body_style))
+            story.append(Spacer(1, 8))
+
     # AI Recommendations
     story.append(Paragraph("AI Recommendations", section_style))
 
@@ -165,6 +196,9 @@ def generate_downtime_pdf(report: dict) -> BytesIO:
         story.append(Paragraph(f"<b>Risk:</b> {_text(rec.get('risk_summary'))}", body_style))
         story.append(Paragraph(f"<b>Confidence:</b> {_text(rec.get('confidence'))}", body_style))
         story.append(Paragraph(f"<b>Source:</b> {_text(rec.get('source'))}", body_style))
+        story.append(Paragraph(f"<b>Review:</b> {_text(rec.get('review_status'))}", body_style))
+        if rec.get("review_note"):
+            story.append(Paragraph(f"<b>Review Note:</b> {_text(rec.get('review_note'))}", body_style))
         story.append(Spacer(1, 6))
 
         story.append(Paragraph("<b>Recommended Actions:</b>", body_style))

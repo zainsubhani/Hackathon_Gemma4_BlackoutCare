@@ -13,6 +13,8 @@ class TokenResponse(BaseModel):
 
 class ForgotPasswordRequest(BaseModel):
     staff_code: str = Field(..., min_length=3, max_length=30)
+    master_password: str = Field(..., min_length=6, max_length=100)
+    new_password: str = Field(..., min_length=6, max_length=100)
 
     @field_validator("staff_code")
     @classmethod
@@ -22,5 +24,9 @@ class ForgotPasswordRequest(BaseModel):
 
 class ForgotPasswordResponse(BaseModel):
     staff_code: str
-    temporary_password: str
     message: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=6, max_length=100)
+    new_password: str = Field(..., min_length=6, max_length=100)

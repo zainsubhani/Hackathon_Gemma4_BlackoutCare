@@ -9,9 +9,15 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.ai import models as ai_models  # noqa: F401
+from app.ai.router import router as ai_router
 from app.events import models as events_models  # noqa: F401
 from app.events.router import router as events_router
 from app.exports.router import router as exports_router
+from app.incidents import models as incidents_models  # noqa: F401
+from app.incidents.router import router as incidents_router
+from app.notes import models as notes_models  # noqa: F401
+from app.notes.router import router as notes_router
+from app.operations.router import router as operations_router
 from app.patients.router import router as patients_router
 from app.protocols import models as protocols_models  # noqa: F401
 from app.protocols.router import router as protocols_router
@@ -47,6 +53,24 @@ def ensure_development_schema():
         connection.execute(
             text("ALTER TABLE users ADD COLUMN IF NOT EXISTS hashed_password VARCHAR")
         )
+        connection.execute(
+            text("ALTER TABLE patients ADD COLUMN IF NOT EXISTS incident_id INTEGER REFERENCES downtime_incidents(id)")
+        )
+        connection.execute(
+            text("ALTER TABLE triage_cases ADD COLUMN IF NOT EXISTS incident_id INTEGER REFERENCES downtime_incidents(id)")
+        )
+        connection.execute(
+            text("ALTER TABLE ai_recommendations ADD COLUMN IF NOT EXISTS review_status VARCHAR DEFAULT 'pending' NOT NULL")
+        )
+        connection.execute(
+            text("ALTER TABLE ai_recommendations ADD COLUMN IF NOT EXISTS reviewed_by INTEGER REFERENCES users(id)")
+        )
+        connection.execute(
+            text("ALTER TABLE ai_recommendations ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP WITH TIME ZONE")
+        )
+        connection.execute(
+            text("ALTER TABLE ai_recommendations ADD COLUMN IF NOT EXISTS review_note TEXT")
+        )
 
 
 app = FastAPI(
@@ -74,6 +98,10 @@ app.include_router(protocols_router)
 app.include_router(exports_router)
 app.include_router(auth_router)
 app.include_router(dashboard_router)
+app.include_router(incidents_router)
+app.include_router(notes_router)
+app.include_router(ai_router)
+app.include_router(operations_router)
 
 
 @app.get("/health")

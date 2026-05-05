@@ -18,8 +18,8 @@ class CaseStatus(str, Enum):
 
 
 class TriageCaseCreate(BaseModel):
+    incident_id: int | None = None
     patient_id: int
-    created_by: int
 
     chief_complaint: str = Field(..., min_length=2, max_length=200)
     symptoms: str | None = Field(default=None, max_length=1000)
@@ -34,6 +34,7 @@ class TriageCaseUpdateStatus(BaseModel):
 
 
 class TriageCaseUpdate(BaseModel):
+    incident_id: int | None = None
     chief_complaint: str | None = Field(default=None, min_length=2, max_length=200)
     symptoms: str | None = Field(default=None, max_length=1000)
     vitals: str | None = Field(default=None, max_length=1000)
@@ -45,6 +46,7 @@ class TriageCaseResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    incident_id: int | None = None
     patient_id: int
     created_by: int
     chief_complaint: str

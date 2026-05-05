@@ -41,7 +41,8 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/blackoutcare
       APP_ENV: development
-      SECRET_KEY: blackoutcare-dev-secret-change-before-production
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      PASSWORD_RESET_MASTER_PASSWORD: ${PASSWORD_RESET_MASTER_PASSWORD:?Set PASSWORD_RESET_MASTER_PASSWORD in .env}
       OLLAMA_URL: http://ollama:11434/api/generate
       OLLAMA_MODEL: gemma:7b
       OLLAMA_TIMEOUT_SECONDS: 30

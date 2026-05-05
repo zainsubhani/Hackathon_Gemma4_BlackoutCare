@@ -17,6 +17,7 @@ class AllergyStatus(str, Enum):
 
 
 class PatientCreate(BaseModel):
+    incident_id: int | None = None
     patient_code: str = Field(..., min_length=3, max_length=50)
     full_name: str | None = Field(default=None, max_length=100)
     age: int | None = Field(default=None, ge=0, le=130)
@@ -33,6 +34,7 @@ class PatientCreate(BaseModel):
 
 
 class PatientUpdate(BaseModel):
+    incident_id: int | None = None
     patient_code: str | None = Field(default=None, min_length=3, max_length=50)
     full_name: str | None = Field(default=None, max_length=100)
     age: int | None = Field(default=None, ge=0, le=130)
@@ -51,6 +53,7 @@ class PatientResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    incident_id: int | None = None
     patient_code: str
     full_name: str | None = None
     age: int | None = None

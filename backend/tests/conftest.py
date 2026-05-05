@@ -12,6 +12,8 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 
 os.environ["DATABASE_URL"] = "sqlite://"
+os.environ["SECRET_KEY"] = "test-secret-key"
+os.environ["PASSWORD_RESET_MASTER_PASSWORD"] = "blackoutcare-admin-reset"
 
 from app.ai import models as ai_models  # noqa: E402,F401
 from app.core.database import Base, get_db  # noqa: E402

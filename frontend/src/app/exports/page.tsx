@@ -3,13 +3,14 @@
 import { AlertTriangle, CalendarDays, Download, FileJson, FileText, Stethoscope, UsersRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
-import { API_URL, apiFetch, getToken, type Patient, type TriageCase } from "@/lib/api";
+import { API_URL, apiFetch, getToken, type Incident, type Patient, type TriageCase } from "@/lib/api";
 
 export default function ExportsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [triageCases, setTriageCases] = useState<TriageCase[]>([]);
+  const [activeIncident, setActiveIncident] = useState<Incident | null>(null);
   const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState<"json" | "pdf" | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const generatedTime = useMemo(
@@ -23,13 +24,15 @@ export default function ExportsPage() {
 
     async function loadSummary() {
       try {
-        const [patientData, caseData] = await Promise.all([
+        const [patientData, caseData, incidentData] = await Promise.all([
           apiFetch<Patient[]>("/patients/?limit=500"),
           apiFetch<TriageCase[]>("/triage/cases/?limit=500"),
+          apiFetch<Incident | null>("/incidents/active").catch(() => null),
         ]);
         if (active) {
           setPatients(patientData);
           setTriageCases(caseData);
+          setActiveIncident(incidentData);
         }
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Unable to load export summary");
@@ -70,6 +73,39 @@ export default function ExportsPage() {
       URL.revokeObjectURL(url);
     } catch {
       setError("Unable to download report from the backend.");
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  async function downloadIncidentReport(format: "json" | "pdf") {
+    const token = getToken();
+    if (!token || !activeIncident) {
+      setError("No active incident is available for export.");
+      return;
+    }
+
+    setError("");
+    setDownloading(`incident-${format}`);
+
+    try {
+      const endpoint = format === "json"
+        ? `${API_URL}/exports/incidents/${activeIncident.id}`
+        : `${API_URL}/exports/incidents/${activeIncident.id}/pdf`;
+      const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error("Download failed");
+
+      const blob = format === "json"
+        ? new Blob([JSON.stringify(await response.json(), null, 2)], { type: "application/json" })
+        : await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `blackoutcare-incident-${activeIncident.id}-${Date.now()}.${format}`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Unable to download incident report from the backend.");
     } finally {
       setDownloading(null);
     }
@@ -117,6 +153,25 @@ export default function ExportsPage() {
             buttonText={downloading === "pdf" ? "Downloading..." : "Download"}
             disabled={downloading !== null}
             onDownload={() => downloadReport("pdf")}
+          />
+        </section>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-2">
+          <ReportCard
+            icon={FileJson}
+            title="Incident JSON"
+            text={activeIncident ? `Structured report for ${activeIncident.name}.` : "Start an active downtime incident to enable incident-scoped exports."}
+            buttonText={downloading === "incident-json" ? "Downloading..." : "Download"}
+            disabled={downloading !== null || !activeIncident}
+            onDownload={() => downloadIncidentReport("json")}
+          />
+          <ReportCard
+            icon={FileText}
+            title="Incident PDF"
+            text={activeIncident ? "Incident-scoped PDF with patients, cases, notes, reviews, and timeline." : "Start an active downtime incident to enable incident-scoped PDF export."}
+            buttonText={downloading === "incident-pdf" ? "Downloading..." : "Download"}
+            disabled={downloading !== null || !activeIncident}
+            onDownload={() => downloadIncidentReport("pdf")}
           />
         </section>
       </div>

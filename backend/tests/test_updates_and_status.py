@@ -100,7 +100,6 @@ def test_patient_protocol_and_triage_updates(client, db_session, auth_headers):
         headers=auth_headers,
         json={
             "patient_id": patient["id"],
-            "created_by": 0,
             "chief_complaint": "Pain",
             "urgency_level": "unassigned",
             "status": "active",

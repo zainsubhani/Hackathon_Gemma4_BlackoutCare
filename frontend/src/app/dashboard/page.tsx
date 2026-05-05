@@ -1,13 +1,14 @@
 "use client";
 
-import { Activity, BookOpen, Download, FileText, Stethoscope, UsersRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Activity, BookOpen, Download, FileText, RadioTower, Stethoscope, UsersRound } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
 import {
   apiFetch,
   formatDateTime,
   titleCase,
   type AuditEvent,
+  type Incident,
   type Patient,
   type Protocol,
   type TriageCase,
@@ -27,6 +28,9 @@ export default function DashboardPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [cases, setCases] = useState<TriageCase[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [activeIncident, setActiveIncident] = useState<Incident | null>(null);
+  const [incidentForm, setIncidentForm] = useState({ name: "", hospital_unit: "", summary: "" });
+  const [incidentSaving, setIncidentSaving] = useState(false);
   const [error, setError] = useState("");
 
   const patientsById = useMemo(
@@ -39,18 +43,20 @@ export default function DashboardPage() {
 
     async function loadDashboard() {
       try {
-        const [summaryData, patientData, caseData, eventData] = await Promise.all([
+        const [summaryData, patientData, caseData, eventData, incidentData] = await Promise.all([
           apiFetch<Summary>("/dashboard/summary"),
           apiFetch<Patient[]>("/patients/?limit=500"),
           apiFetch<TriageCase[]>("/triage/cases/?limit=5"),
-          apiFetch<AuditEvent[]>("/events/?limit=6"),
-          apiFetch<Protocol[]>("/protocols/?limit=1"),
+          apiFetch<AuditEvent[]>("/events/?limit=6").catch(() => []),
+          apiFetch<Incident | null>("/incidents/active").catch(() => null),
+          apiFetch<Protocol[]>("/protocols/?limit=1").catch(() => []),
         ]);
         if (active) {
           setSummary(summaryData);
           setPatients(patientData);
           setCases(caseData);
           setAuditEvents(eventData);
+          setActiveIncident(incidentData);
         }
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Unable to load dashboard data");
@@ -69,6 +75,44 @@ export default function DashboardPage() {
     { label: "Critical", value: summary?.critical_active_cases ?? 0, detail: "need attention", icon: Activity, tone: "red" as const },
     { label: "Protocols", value: summary?.protocols ?? 0, detail: "available", icon: BookOpen, tone: "green" as const },
   ];
+
+  async function createIncident(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIncidentSaving(true);
+    setError("");
+    try {
+      const incident = await apiFetch<Incident>("/incidents/", {
+        method: "POST",
+        body: JSON.stringify({
+          name: incidentForm.name,
+          hospital_unit: incidentForm.hospital_unit || null,
+          summary: incidentForm.summary || null,
+        }),
+      });
+      setActiveIncident(incident);
+      setIncidentForm({ name: "", hospital_unit: "", summary: "" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to start incident");
+    } finally {
+      setIncidentSaving(false);
+    }
+  }
+
+  async function resolveIncident() {
+    if (!activeIncident) return;
+    setIncidentSaving(true);
+    setError("");
+    try {
+      setActiveIncident(await apiFetch<Incident>(`/incidents/${activeIncident.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "resolved" }),
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to resolve incident");
+    } finally {
+      setIncidentSaving(false);
+    }
+  }
 
   return (
     <DashboardShell active="dashboard">
@@ -91,6 +135,40 @@ export default function DashboardPage() {
             <MetricCard key={metric.label} {...metric} />
           ))}
         </div>
+
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+                <RadioTower className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black">Downtime Incident Mode</h2>
+                {activeIncident ? (
+                  <p className="mt-2 text-slate-600">
+                    {activeIncident.name} - {activeIncident.hospital_unit || "Hospital-wide"} - {titleCase(activeIncident.status)}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-slate-600">No active incident. Start one to group downtime records and exports.</p>
+                )}
+              </div>
+            </div>
+            {activeIncident?.status === "active" && (
+              <button onClick={resolveIncident} disabled={incidentSaving} className="h-11 rounded-xl border border-slate-200 px-4 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+                Resolve Incident
+              </button>
+            )}
+          </div>
+          {!activeIncident && (
+            <form onSubmit={createIncident} className="mt-5 grid gap-3 md:grid-cols-3">
+              <input required value={incidentForm.name} onChange={(event) => setIncidentForm({ ...incidentForm, name: event.target.value })} placeholder="Incident name" className="h-11 rounded-xl border border-slate-200 px-3 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100" />
+              <input value={incidentForm.hospital_unit} onChange={(event) => setIncidentForm({ ...incidentForm, hospital_unit: event.target.value })} placeholder="Unit / site" className="h-11 rounded-xl border border-slate-200 px-3 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100" />
+              <button disabled={incidentSaving} className="h-11 rounded-xl bg-teal-600 font-bold text-white hover:bg-teal-700 disabled:opacity-60">
+                {incidentSaving ? "Starting..." : "Start Incident"}
+              </button>
+            </form>
+          )}
+        </section>
 
         <div className="mt-8 grid gap-6 xl:grid-cols-2 xl:items-start">
           <Panel title="Recent Triage Cases">

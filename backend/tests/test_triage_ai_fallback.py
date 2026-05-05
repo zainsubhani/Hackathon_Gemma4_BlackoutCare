@@ -24,7 +24,6 @@ def test_triage_ai_failure_returns_safe_503(client, auth_headers, monkeypatch):
         headers=auth_headers,
         json={
             "patient_id": patient_response.json()["id"],
-            "created_by": 999,
             "chief_complaint": "Chest pain",
             "symptoms": "Shortness of breath",
             "vitals": "BP 88/54, HR 122",

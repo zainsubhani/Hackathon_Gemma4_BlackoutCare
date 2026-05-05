@@ -1,6 +1,6 @@
 "use client";
 
-import { API_URL, apiFetch, formatDateTime, getToken, titleCase, type AIAnalysisResult, type Patient, type TriageCase } from "@/lib/api";
+import { API_URL, apiFetch, formatDateTime, getToken, titleCase, type AIAnalysisResult, type CaseNote, type Patient, type TriageCase } from "@/lib/api";
 import { ChevronDown, Filter, Plus, UserRound } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -11,6 +11,9 @@ export default function TriagePage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedCase, setSelectedCase] = useState<TriageCase | null>(null);
   const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(null);
+  const [notes, setNotes] = useState<CaseNote[]>([]);
+  const [noteForm, setNoteForm] = useState({ note_type: "clinical", content: "" });
+  const [reviewForm, setReviewForm] = useState({ review_status: "accepted", review_note: "" });
   const [analysisError, setAnalysisError] = useState("");
   const [urgency, setUrgency] = useState("");
   const [status, setStatus] = useState("");
@@ -79,7 +82,6 @@ export default function TriagePage() {
         method: "POST",
         body: JSON.stringify({
           patient_id: Number(form.patient_id),
-          created_by: 0,
           chief_complaint: form.chief_complaint,
           symptoms: form.symptoms || null,
           vitals: form.vitals || null,
@@ -102,7 +104,9 @@ export default function TriagePage() {
     setAnalysisError("");
     try {
       const data = await apiFetch<TriageCase>(`/triage/cases/${caseId}`);
+      const noteData = await apiFetch<CaseNote[]>(`/triage/cases/${caseId}/notes/`);
       setSelectedCase(data);
+      setNotes(noteData);
       setEditForm({
         chief_complaint: data.chief_complaint,
         symptoms: data.symptoms || "",
@@ -112,6 +116,47 @@ export default function TriagePage() {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load triage case");
+    }
+  }
+
+  async function createNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedCase) return;
+
+    try {
+      const note = await apiFetch<CaseNote>(`/triage/cases/${selectedCase.id}/notes/`, {
+        method: "POST",
+        body: JSON.stringify(noteForm),
+      });
+      setNotes((items) => [...items, note]);
+      setNoteForm({ note_type: "clinical", content: "" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to add note");
+    }
+  }
+
+  async function reviewRecommendation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!analysis) return;
+
+    try {
+      await apiFetch(`/ai/recommendations/${analysis.recommendation_id}/review`, {
+        method: "PATCH",
+        body: JSON.stringify(reviewForm),
+      });
+      setAnalysis({
+        ...analysis,
+        ai_output: {
+          ...analysis.ai_output,
+          protocol_reasoning: [
+            ...(analysis.ai_output.protocol_reasoning || []),
+            `Reviewed: ${titleCase(reviewForm.review_status)}`,
+          ],
+        },
+      });
+      setReviewForm({ review_status: "accepted", review_note: "" });
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : "Unable to review recommendation");
     }
   }
 
@@ -270,7 +315,29 @@ export default function TriagePage() {
               </div>
             </form>
             {analysisError && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">{analysisError}</div>}
-            {analysis && <AnalysisPanel analysis={analysis} />}
+            {analysis && <AnalysisPanel analysis={analysis} reviewForm={reviewForm} setReviewForm={setReviewForm} onReview={reviewRecommendation} />}
+            <section className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <h3 className="text-lg font-black">Case Notes Timeline</h3>
+              <form onSubmit={createNote} className="mt-4 grid gap-3 md:grid-cols-[12rem_minmax(0,1fr)_9rem]">
+                <select value={noteForm.note_type} onChange={(event) => setNoteForm({ ...noteForm, note_type: event.target.value })} className="h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100">
+                  {["clinical", "vitals", "handoff", "escalation"].map((item) => <option key={item} value={item}>{titleCase(item)}</option>)}
+                </select>
+                <input required value={noteForm.content} onChange={(event) => setNoteForm({ ...noteForm, content: event.target.value })} placeholder="Add note..." className="h-11 rounded-xl border border-slate-200 px-3 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100" />
+                <button className="h-11 rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800">Add Note</button>
+              </form>
+              <div className="mt-4 grid gap-3">
+                {notes.map((note) => (
+                  <article key={note.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-black text-slate-700">{titleCase(note.note_type)}</p>
+                      <p className="text-xs text-slate-500">{formatDateTime(note.created_at)} by User {note.author_id}</p>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">{note.content}</p>
+                  </article>
+                ))}
+                {notes.length === 0 && <p className="text-sm text-slate-500">No notes yet.</p>}
+              </div>
+            </section>
           </section>
         )}
       </div>
@@ -278,7 +345,17 @@ export default function TriagePage() {
   );
 }
 
-function AnalysisPanel({ analysis }: { analysis: AIAnalysisResult }) {
+function AnalysisPanel({
+  analysis,
+  reviewForm,
+  setReviewForm,
+  onReview,
+}: {
+  analysis: AIAnalysisResult;
+  reviewForm: { review_status: string; review_note: string };
+  setReviewForm: (value: { review_status: string; review_note: string }) => void;
+  onReview: (event: FormEvent<HTMLFormElement>) => void;
+}) {
   const output = analysis.ai_output;
   return (
     <section className="mt-5 rounded-xl border border-teal-100 bg-teal-50/60 p-5">
@@ -296,6 +373,13 @@ function AnalysisPanel({ analysis }: { analysis: AIAnalysisResult }) {
         <ListBlock title="Protocol Reasoning" items={output.protocol_reasoning || []} />
         <Detail label="Source" value={output.source || "fallback"} />
       </div>
+      <form onSubmit={onReview} className="mt-5 grid gap-3 rounded-xl border border-teal-100 bg-white p-4 md:grid-cols-[12rem_minmax(0,1fr)_9rem]">
+        <select value={reviewForm.review_status} onChange={(event) => setReviewForm({ ...reviewForm, review_status: event.target.value })} className="h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100">
+          {["accepted", "rejected", "needs_review"].map((item) => <option key={item} value={item}>{titleCase(item)}</option>)}
+        </select>
+        <input value={reviewForm.review_note} onChange={(event) => setReviewForm({ ...reviewForm, review_note: event.target.value })} placeholder="Review note" className="h-11 rounded-xl border border-slate-200 px-3 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100" />
+        <button className="h-11 rounded-xl bg-teal-600 font-bold text-white hover:bg-teal-700">Review</button>
+      </form>
     </section>
   );
 }

@@ -2,24 +2,33 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.patients.models import Patient
+from app.incidents.models import DowntimeIncident
 from app.users.models import User
 from app.triage.models import TriageCase
 from app.triage.schemas import TriageCaseCreate, CaseStatus, TriageCaseUpdate
 from app.events.crud import create_event
 
 
-def create_triage_case(db: Session, triage_case: TriageCaseCreate):
+def create_triage_case(db: Session, triage_case: TriageCaseCreate, created_by: int):
     patient = db.query(Patient).filter(Patient.id == triage_case.patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    user = db.query(User).filter(User.id == triage_case.created_by).first()
+    user = db.query(User).filter(User.id == created_by).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    active_incident = (
+        db.query(DowntimeIncident)
+        .filter(DowntimeIncident.status == "active")
+        .order_by(DowntimeIncident.started_at.desc())
+        .first()
+    )
+
     db_case = TriageCase(
+        incident_id=triage_case.incident_id or patient.incident_id or (active_incident.id if active_incident else None),
         patient_id=triage_case.patient_id,
-        created_by=triage_case.created_by,
+        created_by=created_by,
         chief_complaint=triage_case.chief_complaint,
         symptoms=triage_case.symptoms,
         vitals=triage_case.vitals,
@@ -31,18 +40,20 @@ def create_triage_case(db: Session, triage_case: TriageCaseCreate):
     db.commit()
     db.refresh(db_case)
     create_event(
-    db=db,
-    event_type="TRIAGE_CASE_CREATED",
-    actor_id=triage_case.created_by,
-    case_id=db_case.id,
-    event_data={
-        "patient_id": triage_case.patient_id,
-        "chief_complaint": triage_case.chief_complaint,
-        "symptoms": triage_case.symptoms,
-        "vitals": triage_case.vitals,
-        "urgency_level": triage_case.urgency_level.value,
-        "status": triage_case.status.value,
-    },)
+        db=db,
+        event_type="TRIAGE_CASE_CREATED",
+        actor_id=created_by,
+        case_id=db_case.id,
+        event_data={
+            "patient_id": triage_case.patient_id,
+            "incident_id": db_case.incident_id,
+            "chief_complaint": triage_case.chief_complaint,
+            "symptoms": triage_case.symptoms,
+            "vitals": triage_case.vitals,
+            "urgency_level": triage_case.urgency_level.value,
+            "status": triage_case.status.value,
+        },
+    )
     return db_case
 
 

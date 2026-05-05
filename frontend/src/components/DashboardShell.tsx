@@ -13,19 +13,30 @@ import {
   UserCog,
   UsersRound,
   Wifi,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ElementType, ReactNode } from "react";
+import type { ElementType, FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { API_URL, apiFetch, getToken, type BackendStatus, type User } from "@/lib/api";
+import {
+  API_URL,
+  apiFetch,
+  formatDateTime,
+  getToken,
+  titleCase,
+  type BackendStatus,
+  type GlobalSearchResults,
+  type OperationAlert,
+  type User,
+} from "@/lib/api";
 
 const navItems = [
   { label: "Dashboard", icon: Grid2X2, href: "/dashboard", section: "dashboard" },
   { label: "Patients", icon: UsersRound, href: "/patients", section: "patients" },
   { label: "Triage", icon: Stethoscope, href: "/triage", section: "triage" },
   { label: "Protocols", icon: BookOpen, href: "/protocols", section: "protocols" },
-  { label: "Audit Log", icon: ClipboardList, href: "/audit", section: "audit" },
+  { label: "Audit Log", icon: ClipboardList, href: "/audit", section: "audit", roles: ["admin", "coordinator"] },
   { label: "Exports", icon: Download, href: "/exports", section: "exports" },
   { label: "Staff", icon: UserCog, href: "/staff", section: "staff", roles: ["admin", "coordinator"] },
 ];
@@ -51,6 +62,16 @@ export function DashboardShell({
   const [status, setStatus] = useState<BackendStatus | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [alerts, setAlerts] = useState<OperationAlert[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<GlobalSearchResults | null>(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -70,6 +91,9 @@ export function DashboardShell({
         if (mounted) {
           setCurrentUser(userData);
           setStatus(statusResponse);
+          apiFetch<OperationAlert[]>("/operations/alerts")
+            .then((items) => mounted && setAlerts(items))
+            .catch(() => mounted && setAlerts([]));
         }
       } catch {
         if (mounted) {
@@ -103,6 +127,60 @@ export function DashboardShell({
     router.replace("/login");
   }
 
+  async function changePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordSaving(true);
+    setPasswordError("");
+    setPasswordMessage("");
+
+    try {
+      const result = await apiFetch<{ message: string }>("/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setPasswordMessage(result.message);
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Unable to change password");
+    } finally {
+      setPasswordSaving(false);
+    }
+  }
+
+  function openPasswordDialog() {
+    setAccountOpen(false);
+    setPasswordError("");
+    setPasswordMessage("");
+    setCurrentPassword("");
+    setNewPassword("");
+    setPasswordOpen(true);
+  }
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      apiFetch<GlobalSearchResults>(`/operations/search?q=${encodeURIComponent(searchQuery.trim())}`, {
+        signal: controller.signal,
+      })
+        .then(setSearchResults)
+        .catch(() => setSearchResults(null));
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchQuery]);
+
   const visibleNavItems = navItems.filter((item) => {
     if (!("roles" in item) || !item.roles) return true;
     return currentUser ? item.roles.includes(currentUser.role) : false;
@@ -127,7 +205,7 @@ export function DashboardShell({
               <Shield className="h-7 w-7" />
             </div>
             <p className="text-xl font-black text-white">
-              Care<span className="text-teal-400">Continuum</span>
+              Blackout<span className="text-teal-400">Care</span>
             </p>
           </div>
 
@@ -164,25 +242,64 @@ export function DashboardShell({
                     <Shield className="h-6 w-6" />
                   </div>
                   <p className="text-lg font-black">
-                    Care<span className="text-teal-600">Continuum</span>
+                    Blackout<span className="text-teal-600">Care</span>
                   </p>
                 </div>
                 <StatusPill status={status} />
               </div>
 
-              <div className="flex w-full max-w-md items-center gap-3 rounded-xl bg-slate-100 px-4 py-3 text-slate-500 lg:max-w-sm xl:max-w-md">
-                <Search className="h-5 w-5 shrink-0" />
-                <span className="truncate text-sm sm:text-base">Search patients, cases, protocols...</span>
+              <div className="relative w-full max-w-md lg:max-w-sm xl:max-w-md">
+                <div className="flex items-center gap-3 rounded-xl bg-slate-100 px-4 py-3 text-slate-500">
+                  <Search className="h-5 w-5 shrink-0" />
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-500 sm:text-base"
+                    placeholder="Search patients, cases, protocols..."
+                  />
+                </div>
+                {searchResults && (
+                  <div className="absolute left-0 right-0 top-14 z-40 max-h-96 overflow-auto rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <SearchGroup title="Patients" items={searchResults.patients} clear={() => setSearchQuery("")} />
+                    <SearchGroup title="Cases" items={searchResults.triage_cases} clear={() => setSearchQuery("")} />
+                    <SearchGroup title="Protocols" items={searchResults.protocols} clear={() => setSearchQuery("")} />
+                    <SearchGroup title="Incidents" items={searchResults.incidents} clear={() => setSearchQuery("")} />
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between gap-4 lg:justify-end">
                 <div className="hidden lg:block">
                   <StatusPill status={status} />
                 </div>
-                <button className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100" aria-label="Notifications">
+                <button
+                  onClick={() => setAlertsOpen((value) => !value)}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100"
+                  aria-label="Notifications"
+                >
                   <Bell className="h-5 w-5" />
-                  <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+                  {alerts.length > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
                 </button>
+                {alertsOpen && (
+                  <div className="absolute right-20 top-20 z-40 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <div className="border-b border-slate-100 px-4 py-3">
+                      <p className="font-bold">Alerts</p>
+                      <p className="text-sm text-slate-500">{alerts.length} active signals</p>
+                    </div>
+                    <div className="max-h-96 overflow-auto">
+                      {alerts.map((alert, index) => (
+                        <Link key={`${alert.type}-${index}`} href={alert.href} onClick={() => setAlertsOpen(false)} className="block border-b border-slate-100 px-4 py-3 hover:bg-slate-50">
+                          <p className={`text-sm font-bold ${alert.severity === "critical" ? "text-red-700" : alert.severity === "warning" ? "text-amber-700" : "text-slate-800"}`}>
+                            {alert.title}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">{alert.description}</p>
+                          <p className="mt-1 text-xs text-slate-400">{formatDateTime(alert.created_at)}</p>
+                        </Link>
+                      ))}
+                      {alerts.length === 0 && <p className="px-4 py-6 text-sm text-slate-500">No active alerts.</p>}
+                    </div>
+                  </div>
+                )}
                 <div className="h-8 w-px bg-slate-200" />
                 <div className="relative">
                   <button
@@ -207,8 +324,15 @@ export function DashboardShell({
                         <p className="text-sm text-slate-500">{currentUser?.staff_code}</p>
                       </div>
                       <button
+                        onClick={openPasswordDialog}
+                        className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
+                        role="menuitem"
+                      >
+                        Change password
+                      </button>
+                      <button
                         onClick={signOut}
-                        className="w-full px-4 py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50"
+                        className="w-full border-t border-slate-100 px-4 py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50"
                         role="menuitem"
                       >
                         Sign out
@@ -229,6 +353,68 @@ export function DashboardShell({
           {children}
         </section>
       </div>
+
+      {passwordOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-8">
+          <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-900/20 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-black">Change Password</h2>
+                <p className="mt-1 text-sm text-slate-500">Update your local BlackoutCare password.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPasswordOpen(false)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+                aria-label="Close change password"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={changePassword} className="mt-5 space-y-4">
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                Current Password
+                <input
+                  required
+                  type="password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  className="h-12 rounded-xl border border-slate-200 px-3 font-normal text-slate-900 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                New Password
+                <input
+                  required
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  className="h-12 rounded-xl border border-slate-200 px-3 font-normal text-slate-900 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
+                />
+              </label>
+
+              {passwordError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  {passwordError}
+                </div>
+              )}
+              {passwordMessage && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                  {passwordMessage}
+                </div>
+              )}
+
+              <button
+                disabled={passwordSaving}
+                className="h-12 w-full rounded-xl bg-teal-600 font-bold text-white transition hover:bg-teal-700 disabled:opacity-60"
+              >
+                {passwordSaving ? "Saving..." : "Save Password"}
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
@@ -240,6 +426,30 @@ function StatusPill({ status }: { status: BackendStatus | null }) {
     <div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${online ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
       <Wifi className="h-4 w-4" />
       {online ? "System Online" : status?.ollama === "model_missing" ? "AI Model Missing" : "System Degraded"}
+    </div>
+  );
+}
+
+function SearchGroup({
+  title,
+  items,
+  clear,
+}: {
+  title: string;
+  items: { id: number; label: string; description: string | null; href: string }[];
+  clear: () => void;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="border-b border-slate-100 py-2">
+      <p className="px-4 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-400">{title}</p>
+      {items.map((item) => (
+        <Link key={`${title}-${item.id}`} href={item.href} onClick={clear} className="block px-4 py-2 hover:bg-slate-50">
+          <p className="text-sm font-bold text-slate-900">{item.label}</p>
+          {item.description && <p className="mt-0.5 truncate text-xs text-slate-500">{item.description}</p>}
+        </Link>
+      ))}
     </div>
   );
 }

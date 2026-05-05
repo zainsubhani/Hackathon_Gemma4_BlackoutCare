@@ -8,6 +8,7 @@ class TriageCase(Base):
     __tablename__ = "triage_cases"
 
     id = Column(Integer, primary_key=True, index=True)
+    incident_id = Column(Integer, ForeignKey("downtime_incidents.id"), nullable=True)
 
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)

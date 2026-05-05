@@ -43,7 +43,6 @@ def test_triage_status_update_writes_audit_event(client, auth_headers, db_sessio
         headers=auth_headers,
         json={
             "patient_id": patient_response.json()["id"],
-            "created_by": 999,
             "chief_complaint": "Weakness",
             "symptoms": "Dizziness",
             "vitals": "BP 100/70",

@@ -3,9 +3,11 @@ import logging
 import requests
 
 from fastapi import HTTPException
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.ai.crud import create_ai_recommendation
+from app.ai.schemas import AIRecommendationPayload
 from app.ai.service import build_triage_prompt, call_gemma, parse_gemma_json
 from app.events.crud import create_event
 from app.patients.models import Patient
@@ -32,7 +34,8 @@ def analyze_triage_case(db: Session, case_id: int):
     try:
         raw_response = call_gemma(prompt)
         parsed_response = parse_gemma_json(raw_response)
-    except (requests.RequestException, ValueError, KeyError) as exc:
+        parsed_response = AIRecommendationPayload.model_validate(parsed_response).model_dump()
+    except (requests.RequestException, ValueError, KeyError, ValidationError) as exc:
         logger.exception("AI recommendation failed for triage case %s", case_id)
         create_event(
             db=db,

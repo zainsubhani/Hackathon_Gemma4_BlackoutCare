@@ -16,8 +16,7 @@ def create_triage_case(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    triage_case = triage_case.model_copy(update={"created_by": current_user.id})
-    return crud.create_triage_case(db, triage_case)
+    return crud.create_triage_case(db, triage_case, created_by=current_user.id)
 
 
 @router.get("/", response_model=list[schemas.TriageCaseResponse])

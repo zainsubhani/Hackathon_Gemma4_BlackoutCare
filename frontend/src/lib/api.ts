@@ -10,6 +10,7 @@ export type BackendStatus = {
 
 export type Patient = {
   id: number;
+  incident_id: number | null;
   patient_code: string;
   full_name: string | null;
   age: number | null;
@@ -22,6 +23,7 @@ export type Patient = {
 
 export type TriageCase = {
   id: number;
+  incident_id: number | null;
   patient_id: number;
   created_by: number;
   chief_complaint: string;
@@ -98,6 +100,50 @@ export type AIAnalysisResult = {
     source?: string;
     protocol_reasoning?: string[];
   };
+};
+
+export type Incident = {
+  id: number;
+  name: string;
+  hospital_unit: string | null;
+  status: "active" | "resolved";
+  commander_id: number | null;
+  summary: string | null;
+  started_at: string;
+  ended_at: string | null;
+  created_at: string;
+};
+
+export type CaseNote = {
+  id: number;
+  case_id: number;
+  author_id: number;
+  note_type: "clinical" | "vitals" | "handoff" | "escalation";
+  content: string;
+  created_at: string;
+};
+
+export type OperationAlert = {
+  type: string;
+  severity: "critical" | "warning" | "info";
+  title: string;
+  description: string;
+  href: string;
+  created_at: string;
+};
+
+export type SearchItem = {
+  id: number;
+  label: string;
+  description: string | null;
+  href: string;
+};
+
+export type GlobalSearchResults = {
+  patients: SearchItem[];
+  triage_cases: SearchItem[];
+  protocols: SearchItem[];
+  incidents: SearchItem[];
 };
 
 export function getToken() {

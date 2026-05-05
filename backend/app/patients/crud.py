@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.patients.models import Patient
 from app.patients.schemas import PatientCreate, PatientUpdate
 from app.events.crud import create_event
+from app.incidents.models import DowntimeIncident
 
 
 def get_patient_by_code(db: Session, patient_code: str):
@@ -20,7 +21,15 @@ def create_patient(db: Session, patient: PatientCreate, actor_id: int | None = N
             detail=f"Patient with code '{patient.patient_code}' already exists",
         )
 
+    active_incident = (
+        db.query(DowntimeIncident)
+        .filter(DowntimeIncident.status == "active")
+        .order_by(DowntimeIncident.started_at.desc())
+        .first()
+    )
+
     db_patient = Patient(
+        incident_id=patient.incident_id or (active_incident.id if active_incident else None),
         patient_code=patient.patient_code,
         full_name=patient.full_name,
         age=patient.age,
@@ -40,6 +49,7 @@ def create_patient(db: Session, patient: PatientCreate, actor_id: int | None = N
             actor_id=actor_id,
             event_data={
                 "patient_id": db_patient.id,
+                "incident_id": db_patient.incident_id,
                 "patient_code": db_patient.patient_code,
             },
         )

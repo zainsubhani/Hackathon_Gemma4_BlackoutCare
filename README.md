@@ -199,7 +199,8 @@ Create a `.env` file at the project root:
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/blackoutcare
 APP_ENV=development
-SECRET_KEY=blackoutcare-dev-secret-change-before-production
+SECRET_KEY=replace-with-a-long-random-secret
+PASSWORD_RESET_MASTER_PASSWORD=replace-with-an-offline-admin-reset-secret
 OLLAMA_URL=http://localhost:11434/api/generate
 OLLAMA_MODEL=gemma:7b
 OLLAMA_TIMEOUT_SECONDS=30

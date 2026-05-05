@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -8,6 +8,7 @@ class Patient(Base):
     __tablename__ = "patients"
 
     id = Column(Integer, primary_key=True, index=True)
+    incident_id = Column(Integer, ForeignKey("downtime_incidents.id"), nullable=True)
 
     patient_code = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=True)
