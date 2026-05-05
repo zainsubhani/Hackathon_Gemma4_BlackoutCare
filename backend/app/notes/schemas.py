@@ -24,4 +24,6 @@ class CaseNoteResponse(BaseModel):
     author_id: int
     note_type: NoteType
     content: str
+    sync_status: str = "pending"
+    sync_error: str | None = None
     created_at: datetime

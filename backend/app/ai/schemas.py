@@ -42,4 +42,6 @@ class AIRecommendationResponse(BaseModel):
     reviewed_by: int | None = None
     reviewed_at: datetime | None = None
     review_note: str | None = None
+    sync_status: str = "pending"
+    sync_error: str | None = None
     created_at: datetime

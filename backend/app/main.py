@@ -19,6 +19,7 @@ from app.notes import models as notes_models  # noqa: F401
 from app.notes.router import router as notes_router
 from app.operations.router import router as operations_router
 from app.patients.router import router as patients_router
+from app.recovery.router import router as recovery_router
 from app.protocols import models as protocols_models  # noqa: F401
 from app.protocols.router import router as protocols_router
 from app.triage import models as triage_models  # noqa: F401
@@ -71,6 +72,30 @@ def ensure_development_schema():
         connection.execute(
             text("ALTER TABLE ai_recommendations ADD COLUMN IF NOT EXISTS review_note TEXT")
         )
+        connection.execute(
+            text("ALTER TABLE patients ADD COLUMN IF NOT EXISTS sync_status VARCHAR DEFAULT 'pending' NOT NULL")
+        )
+        connection.execute(
+            text("ALTER TABLE patients ADD COLUMN IF NOT EXISTS sync_error VARCHAR")
+        )
+        connection.execute(
+            text("ALTER TABLE triage_cases ADD COLUMN IF NOT EXISTS sync_status VARCHAR DEFAULT 'pending' NOT NULL")
+        )
+        connection.execute(
+            text("ALTER TABLE triage_cases ADD COLUMN IF NOT EXISTS sync_error TEXT")
+        )
+        connection.execute(
+            text("ALTER TABLE case_notes ADD COLUMN IF NOT EXISTS sync_status VARCHAR DEFAULT 'pending' NOT NULL")
+        )
+        connection.execute(
+            text("ALTER TABLE case_notes ADD COLUMN IF NOT EXISTS sync_error TEXT")
+        )
+        connection.execute(
+            text("ALTER TABLE ai_recommendations ADD COLUMN IF NOT EXISTS sync_status VARCHAR DEFAULT 'pending' NOT NULL")
+        )
+        connection.execute(
+            text("ALTER TABLE ai_recommendations ADD COLUMN IF NOT EXISTS sync_error TEXT")
+        )
 
 
 app = FastAPI(
@@ -102,6 +127,7 @@ app.include_router(incidents_router)
 app.include_router(notes_router)
 app.include_router(ai_router)
 app.include_router(operations_router)
+app.include_router(recovery_router)
 
 
 @app.get("/health")

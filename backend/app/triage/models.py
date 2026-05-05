@@ -19,6 +19,8 @@ class TriageCase(Base):
 
     urgency_level = Column(String, nullable=False, default="unassigned")
     status = Column(String, nullable=False, default="active")
+    sync_status = Column(String, nullable=False, default="pending")
+    sync_error = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

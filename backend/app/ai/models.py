@@ -21,5 +21,7 @@ class AIRecommendation(Base):
     reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
     review_note = Column(Text, nullable=True)
+    sync_status = Column(String, nullable=False, default="pending")
+    sync_error = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

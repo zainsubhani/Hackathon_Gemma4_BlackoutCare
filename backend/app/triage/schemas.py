@@ -54,5 +54,7 @@ class TriageCaseResponse(BaseModel):
     vitals: str | None = None
     urgency_level: UrgencyLevel
     status: CaseStatus
+    sync_status: str = "pending"
+    sync_error: str | None = None
     created_at: datetime
     updated_at: datetime

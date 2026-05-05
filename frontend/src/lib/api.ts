@@ -18,6 +18,8 @@ export type Patient = {
   allergy_status: "unknown" | "none" | "known";
   known_conditions: string | null;
   current_medications: string | null;
+  sync_status: string;
+  sync_error: string | null;
   created_at: string;
 };
 
@@ -31,6 +33,8 @@ export type TriageCase = {
   vitals: string | null;
   urgency_level: "critical" | "urgent" | "stable" | "unassigned";
   status: "active" | "monitoring" | "escalated" | "closed";
+  sync_status: string;
+  sync_error: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -120,7 +124,37 @@ export type CaseNote = {
   author_id: number;
   note_type: "clinical" | "vitals" | "handoff" | "escalation";
   content: string;
+  sync_status: string;
+  sync_error: string | null;
   created_at: string;
+};
+
+export type RecoveryItem = {
+  item_type: "patient" | "triage_case" | "case_note" | "ai_recommendation";
+  item_id: number;
+  label: string;
+  description: string;
+  sync_status: "pending" | "reviewed" | "synced" | "failed" | "manual_entry_required";
+  sync_error: string | null;
+  readiness: "ready" | "needs_review";
+};
+
+export type RecoveryPreview = {
+  incident: {
+    id: number;
+    name: string;
+    status: string;
+    hospital_unit: string | null;
+  };
+  summary: {
+    total_items: number;
+    pending: number;
+    reviewed: number;
+    synced: number;
+    failed: number;
+    manual_entry_required: number;
+  };
+  items: RecoveryItem[];
 };
 
 export type OperationAlert = {

@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Download,
   Grid2X2,
+  RefreshCcw,
   Search,
   Shield,
   Stethoscope,
@@ -38,6 +39,7 @@ const navItems = [
   { label: "Protocols", icon: BookOpen, href: "/protocols", section: "protocols" },
   { label: "Audit Log", icon: ClipboardList, href: "/audit", section: "audit", roles: ["admin", "coordinator"] },
   { label: "Exports", icon: Download, href: "/exports", section: "exports" },
+  { label: "Recovery", icon: RefreshCcw, href: "/recovery", section: "recovery", roles: ["admin", "coordinator"] },
   { label: "Staff", icon: UserCog, href: "/staff", section: "staff", roles: ["admin", "coordinator"] },
 ];
 
@@ -48,6 +50,7 @@ export type DashboardSection =
   | "protocols"
   | "audit"
   | "exports"
+  | "recovery"
   | "staff";
 
 export function DashboardShell({

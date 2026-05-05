@@ -12,4 +12,6 @@ class CaseNote(Base):
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     note_type = Column(String, nullable=False, default="clinical")
     content = Column(Text, nullable=False)
+    sync_status = Column(String, nullable=False, default="pending")
+    sync_error = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

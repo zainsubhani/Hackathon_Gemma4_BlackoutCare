@@ -61,4 +61,6 @@ class PatientResponse(BaseModel):
     allergy_status: AllergyStatus
     known_conditions: str | None = None
     current_medications: str | None = None
+    sync_status: str = "pending"
+    sync_error: str | None = None
     created_at: datetime
