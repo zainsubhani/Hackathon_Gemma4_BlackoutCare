@@ -88,6 +88,7 @@ def update_sync_status(
     payload: RecoveryStatusUpdate,
     actor_id: int,
 ):
+    incident, patients, cases, notes, recommendations = _incident_records(db, payload.incident_id)
     model = {
         "patient": Patient,
         "triage_case": TriageCase,
@@ -97,6 +98,15 @@ def update_sync_status(
     item = db.query(model).filter(model.id == payload.item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Recovery item not found")
+
+    valid_ids = {
+        "patient": {patient.id for patient in patients},
+        "triage_case": {case.id for case in cases},
+        "case_note": {note.id for note in notes},
+        "ai_recommendation": {rec.id for rec in recommendations},
+    }[payload.item_type.value]
+    if payload.item_id not in valid_ids:
+        raise HTTPException(status_code=400, detail="Recovery item does not belong to this incident")
 
     item.sync_status = payload.sync_status.value
     item.sync_error = payload.sync_error
@@ -109,6 +119,7 @@ def update_sync_status(
         case_id=item.case_id if hasattr(item, "case_id") else None,
         event_data={
             "item_type": payload.item_type.value,
+            "incident_id": payload.incident_id,
             "item_id": payload.item_id,
             "sync_status": payload.sync_status.value,
             "sync_error": payload.sync_error,

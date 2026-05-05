@@ -19,6 +19,7 @@ class SyncStatus(str, Enum):
 
 
 class RecoveryStatusUpdate(BaseModel):
+    incident_id: int
     item_type: RecoveryItemType
     item_id: int
     sync_status: SyncStatus

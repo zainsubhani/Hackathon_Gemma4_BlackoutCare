@@ -27,6 +27,8 @@ def create_user(db: Session, user: UserCreate):
         department=user.department,
         staff_code=user.staff_code,
         hashed_password=hash_password(user.password),
+        is_active="true" if user.is_active else "false",
+        must_change_password="true" if user.must_change_password else "false",
     )
 
     try:
@@ -89,6 +91,8 @@ def update_user(db: Session, user_id: int, payload: UserUpdate):
             db_user.hashed_password = hash_password(password)
 
     for field, value in update_data.items():
+        if field in {"is_active", "must_change_password"}:
+            value = "true" if value else "false"
         setattr(db_user, field, value)
 
     db.commit()

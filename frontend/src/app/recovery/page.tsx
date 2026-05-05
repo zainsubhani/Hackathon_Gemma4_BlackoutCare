@@ -54,6 +54,7 @@ export default function RecoveryPage() {
         body: JSON.stringify({
           item_type: item.item_type,
           item_id: item.item_id,
+          incident_id: activeIncident?.id,
           sync_status: syncStatus,
           sync_error: syncStatus === "failed" ? "Marked failed during recovery review" : null,
         }),

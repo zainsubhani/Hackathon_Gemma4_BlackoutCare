@@ -23,6 +23,7 @@ def test_patient_creation_writes_audit_event(client, auth_headers, db_session):
     )
     assert event.actor_id is not None
     assert "P-AUDIT-1" in event.event_data
+    assert event.event_hash
 
 
 def test_triage_status_update_writes_audit_event(client, auth_headers, db_session):
@@ -64,8 +65,16 @@ def test_triage_status_update_writes_audit_event(client, auth_headers, db_sessio
         .filter(Event.event_type == "TRIAGE_STATUS_UPDATED")
         .one()
     )
+    first_event = (
+        db_session.query(Event)
+        .filter(Event.id < event.id)
+        .order_by(Event.id.desc())
+        .first()
+    )
     assert event.case_id == case_response.json()["id"]
     assert "monitoring" in event.event_data
+    assert event.previous_hash == first_event.event_hash
+    assert event.event_hash != event.previous_hash
 
 
 def test_json_export_writes_audit_event(client, auth_headers, db_session):

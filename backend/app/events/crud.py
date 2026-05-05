@@ -1,3 +1,4 @@
+import hashlib
 import json
 from sqlalchemy.orm import Session
 
@@ -11,17 +12,37 @@ def create_event(
     case_id: int | None = None,
     event_data: dict | None = None,
 ):
+    latest_event = db.query(Event).order_by(Event.id.desc()).first()
+    previous_hash = latest_event.event_hash if latest_event else None
+    encoded_data = json.dumps(event_data or {}, sort_keys=True)
     db_event = Event(
         event_type=event_type,
         actor_id=actor_id,
         case_id=case_id,
-        event_data=json.dumps(event_data or {}),
+        event_data=encoded_data,
+        previous_hash=previous_hash,
     )
 
     db.add(db_event)
+    db.flush()
+    db_event.event_hash = _event_hash(db_event)
     db.commit()
     db.refresh(db_event)
     return db_event
+
+
+def _event_hash(event: Event) -> str:
+    payload = "|".join(
+        [
+            str(event.id),
+            str(event.previous_hash or ""),
+            str(event.event_type),
+            str(event.actor_id or ""),
+            str(event.case_id or ""),
+            str(event.event_data or ""),
+        ]
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def get_events(

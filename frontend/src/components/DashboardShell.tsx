@@ -10,6 +10,7 @@ import {
   RefreshCcw,
   Search,
   Shield,
+  ShieldAlert,
   Stethoscope,
   UserCog,
   UsersRound,
@@ -34,6 +35,7 @@ import {
 
 const navItems = [
   { label: "Dashboard", icon: Grid2X2, href: "/dashboard", section: "dashboard" },
+  { label: "Safety Board", icon: ShieldAlert, href: "/safety", section: "safety" },
   { label: "Patients", icon: UsersRound, href: "/patients", section: "patients" },
   { label: "Triage", icon: Stethoscope, href: "/triage", section: "triage" },
   { label: "Protocols", icon: BookOpen, href: "/protocols", section: "protocols" },
@@ -45,6 +47,7 @@ const navItems = [
 
 export type DashboardSection =
   | "dashboard"
+  | "safety"
   | "patients"
   | "triage"
   | "protocols"

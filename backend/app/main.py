@@ -55,6 +55,18 @@ def ensure_development_schema():
             text("ALTER TABLE users ADD COLUMN IF NOT EXISTS hashed_password VARCHAR")
         )
         connection.execute(
+            text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active VARCHAR DEFAULT 'true' NOT NULL")
+        )
+        connection.execute(
+            text("ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password VARCHAR DEFAULT 'false' NOT NULL")
+        )
+        connection.execute(
+            text("ALTER TABLE events ADD COLUMN IF NOT EXISTS previous_hash VARCHAR")
+        )
+        connection.execute(
+            text("ALTER TABLE events ADD COLUMN IF NOT EXISTS event_hash VARCHAR")
+        )
+        connection.execute(
             text("ALTER TABLE patients ADD COLUMN IF NOT EXISTS incident_id INTEGER REFERENCES downtime_incidents(id)")
         )
         connection.execute(

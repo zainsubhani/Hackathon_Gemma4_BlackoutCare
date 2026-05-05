@@ -13,5 +13,7 @@ class User(Base):
     department = Column(String, nullable=True)
     staff_code = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=True)
+    is_active = Column(String, nullable=False, default="true")
+    must_change_password = Column(String, nullable=False, default="false")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

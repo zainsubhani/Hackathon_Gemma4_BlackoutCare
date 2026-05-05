@@ -64,6 +64,8 @@ export type AuditEvent = {
   actor_id: number | null;
   event_type: string;
   event_data: string | null;
+  previous_hash: string | null;
+  event_hash: string | null;
   created_at: string;
 };
 
@@ -73,6 +75,8 @@ export type User = {
   role: "doctor" | "nurse" | "admin" | "coordinator";
   department: string | null;
   staff_code: string;
+  is_active: boolean;
+  must_change_password: boolean;
   created_at: string;
 };
 
@@ -155,6 +159,40 @@ export type RecoveryPreview = {
     manual_entry_required: number;
   };
   items: RecoveryItem[];
+};
+
+export type SafetyCase = {
+  id: number;
+  patient_id: number;
+  patient_label: string;
+  patient_name: string | null;
+  chief_complaint: string;
+  urgency_level: string;
+  status: string;
+  created_at: string;
+  last_note_at?: string | null;
+};
+
+export type SafetyBoard = {
+  summary: {
+    open_cases: number;
+    critical_cases: number;
+    unknown_allergies: number;
+    stale_note_cases: number;
+    pending_ai_reviews: number;
+    recovery_pending: number;
+  };
+  critical_cases: SafetyCase[];
+  unknown_allergies: SafetyCase[];
+  stale_note_cases: SafetyCase[];
+  unassigned_cases: SafetyCase[];
+  pending_ai_reviews: Array<{
+    id: number;
+    case_id: number;
+    risk_summary: string;
+    confidence: string;
+    created_at: string;
+  }>;
 };
 
 export type OperationAlert = {

@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, field_serializer
 
 
 class UserRole(str, Enum):
@@ -16,6 +16,8 @@ class UserCreate(BaseModel):
     department: str | None = Field(default=None, max_length=100)
     staff_code: str = Field(..., min_length=3, max_length=30)
     password: str = Field(..., min_length=6, max_length=100)
+    is_active: bool = True
+    must_change_password: bool = False
 
     @field_validator("staff_code")
     @classmethod
@@ -29,6 +31,8 @@ class UserUpdate(BaseModel):
     department: str | None = Field(default=None, max_length=100)
     staff_code: str | None = Field(default=None, min_length=3, max_length=30)
     password: str | None = Field(default=None, min_length=6, max_length=100)
+    is_active: bool | None = None
+    must_change_password: bool | None = None
 
     @field_validator("staff_code")
     @classmethod
@@ -44,4 +48,12 @@ class UserResponse(BaseModel):
     role: UserRole
     department: str | None = None
     staff_code: str
+    is_active: bool
+    must_change_password: bool
     created_at: datetime
+
+    @field_serializer("is_active", "must_change_password")
+    def serialize_string_bool(self, value):
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() == "true"

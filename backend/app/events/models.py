@@ -14,5 +14,7 @@ class Event(Base):
 
     event_type = Column(String, nullable=False)
     event_data = Column(Text, nullable=True)
+    previous_hash = Column(String, nullable=True)
+    event_hash = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

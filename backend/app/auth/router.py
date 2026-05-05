@@ -31,6 +31,18 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     _raise_if_locked(f"login:{staff_code}")
     user = get_user_by_staff_code(db, staff_code)
 
+    if user and user.is_active != "true":
+        create_event(
+            db=db,
+            event_type="LOGIN_FAILED",
+            actor_id=user.id,
+            event_data={"staff_code": staff_code, "reason": "inactive_user"},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is disabled",
+        )
+
     if (
         not user
         or not user.hashed_password
@@ -102,6 +114,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
         )
 
     user.hashed_password = hash_password(payload.new_password)
+    user.must_change_password = "true"
 
     create_event(
         db=db,
@@ -147,6 +160,7 @@ def change_password(
         )
 
     current_user.hashed_password = hash_password(payload.new_password)
+    current_user.must_change_password = "false"
     create_event(
         db=db,
         event_type="PASSWORD_CHANGED",

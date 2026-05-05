@@ -163,6 +163,27 @@ def test_authenticated_user_can_change_password(client):
     assert new_login_response.status_code == 200
 
 
+def test_inactive_user_cannot_login(client):
+    create_response = client.post(
+        "/users/",
+        json={
+            "full_name": "Disabled User",
+            "role": "doctor",
+            "department": "Emergency",
+            "staff_code": "doc-disabled",
+            "password": "password123",
+            "is_active": False,
+        },
+    )
+    assert create_response.status_code == 200
+
+    login_response = client.post(
+        "/auth/login",
+        json={"staff_code": "DOC-DISABLED", "password": "password123"},
+    )
+    assert login_response.status_code == 403
+
+
 def test_audit_events_require_admin_or_coordinator(client, db_session, auth_headers):
     blocked = client.get("/events/", headers=auth_headers)
     assert blocked.status_code == 403

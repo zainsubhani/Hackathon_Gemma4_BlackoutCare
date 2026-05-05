@@ -59,6 +59,7 @@ def test_recovery_preview_status_update_and_fhir_bundle(client, db_session, auth
         "/recovery/sync-status",
         headers=admin_headers,
         json={
+            "incident_id": incident_id,
             "item_type": "patient",
             "item_id": patient_item["item_id"],
             "sync_status": "synced",
