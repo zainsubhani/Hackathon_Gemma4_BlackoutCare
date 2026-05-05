@@ -1,28 +1,28 @@
 services:
   postgres:
     image: ankane/pgvector
-    container_name: carecontinuum-postgres
+    container_name: blackoutcare-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: carecontinuum
+      POSTGRES_DB: blackoutcare
     ports:
       - "5433:5432"
     volumes:
-      - carecontinuum-postgres-data:/var/lib/postgresql/data
+      - blackoutcare-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d carecontinuum"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d blackoutcare"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   ollama:
     image: ollama/ollama
-    container_name: carecontinuum-ollama
+    container_name: blackoutcare-ollama
     ports:
       - "11434:11434"
     volumes:
-      - carecontinuum-ollama-data:/root/.ollama
+      - blackoutcare-ollama-data:/root/.ollama
 
   ollama-model:
     image: ollama/ollama
@@ -37,11 +37,11 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: carecontinuum-backend
+    container_name: blackoutcare-backend
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/carecontinuum
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/blackoutcare
       APP_ENV: development
-      SECRET_KEY: carecontinuum-dev-secret-change-before-production
+      SECRET_KEY: blackoutcare-dev-secret-change-before-production
       OLLAMA_URL: http://ollama:11434/api/generate
       OLLAMA_MODEL: gemma:7b
       OLLAMA_TIMEOUT_SECONDS: 30
@@ -57,7 +57,7 @@ services:
 
   frontend:
     image: node:22-alpine
-    container_name: carecontinuum-frontend
+    container_name: blackoutcare-frontend
     working_dir: /app
     environment:
       NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
@@ -66,11 +66,11 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
-      - carecontinuum-frontend-node-modules:/app/node_modules
+      - blackoutcare-frontend-node-modules:/app/node_modules
     depends_on:
       - backend
 
 volumes:
-  carecontinuum-postgres-data:
-  carecontinuum-ollama-data:
-  carecontinuum-frontend-node-modules:
+  blackoutcare-postgres-data:
+  blackoutcare-ollama-data:
+  blackoutcare-frontend-node-modules:

@@ -49,7 +49,7 @@ def build_full_downtime_report(db: Session) -> dict:
     return {
         "export_type": "full_hospital_downtime_report",
         "generated_at": datetime.now(timezone.utc),
-        "hospital_name": "CareContinuum Demo Hospital",
+        "hospital_name": "BlackoutCare Demo Hospital",
         "summary": {
             "total_patients": len(patients),
             "total_triage_cases": len(triage_cases),

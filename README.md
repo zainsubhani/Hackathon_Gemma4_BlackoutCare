@@ -1,6 +1,6 @@
-# CareContinuum
+# BlackoutCare
 
-CareContinuum is a full-stack offline hospital downtime copilot. It is designed for scenarios where clinical teams lose access to normal hospital systems during outages, cyberattacks, or degraded network conditions.
+BlackoutCare is a full-stack offline hospital downtime copilot. It is designed for scenarios where clinical teams lose access to normal hospital systems during outages, cyberattacks, or degraded network conditions.
 
 The project includes a FastAPI backend and a Next.js frontend for structured downtime workflows: users, patients, triage cases, clinical protocols, AI-assisted recommendations, audit events, staff administration, and recovery exports.
 
@@ -8,7 +8,7 @@ The project includes a FastAPI backend and a Next.js frontend for structured dow
 
 Hospitals depend heavily on EHRs, decision-support systems, and connected workflows. During ransomware events or IT outages, clinicians may lose access to patient records, protocol guidance, and normal documentation tools.
 
-CareContinuum addresses this gap by providing a local-first API that supports:
+BlackoutCare addresses this gap by providing a local-first API that supports:
 
 - Downtime patient registration
 - Clinical triage workflow continuity
@@ -197,9 +197,9 @@ backend/
 Create a `.env` file at the project root:
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5433/carecontinuum
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/blackoutcare
 APP_ENV=development
-SECRET_KEY=carecontinuum-dev-secret-change-before-production
+SECRET_KEY=blackoutcare-dev-secret-change-before-production
 OLLAMA_URL=http://localhost:11434/api/generate
 OLLAMA_MODEL=gemma:7b
 OLLAMA_TIMEOUT_SECONDS=30
@@ -370,7 +370,7 @@ GET /users/?role=doctor
 
 ## Safety and Clinical Boundaries
 
-CareContinuum intentionally frames AI responses as decision support:
+BlackoutCare intentionally frames AI responses as decision support:
 
 - It does not diagnose.
 - It does not replace clinicians.
@@ -380,7 +380,7 @@ CareContinuum intentionally frames AI responses as decision support:
 
 ## Current Engineering Status
 
-CareContinuum is hackathon-demo ready. It includes authentication, protected frontend workflows, local AI integration, audit logging, exports, Dockerized backend infrastructure, and a focused pytest suite.
+BlackoutCare is hackathon-demo ready. It includes authentication, protected frontend workflows, local AI integration, audit logging, exports, Dockerized backend infrastructure, and a focused pytest suite.
 
 Frontend workflow documentation is available in:
 
@@ -405,4 +405,4 @@ Recommended next engineering improvements:
 
 ## Project Positioning
 
-CareContinuum demonstrates a full-stack approach to resilient healthcare workflows under downtime conditions. It combines a protected clinical operations UI, local-first backend infrastructure, structured workflow modeling, auditability, and protocol-grounded AI assistance in a way that is practical for a hackathon demo and extensible toward a production-grade system.
+BlackoutCare demonstrates a full-stack approach to resilient healthcare workflows under downtime conditions. It combines a protected clinical operations UI, local-first backend infrastructure, structured workflow modeling, auditability, and protocol-grounded AI assistance in a way that is practical for a hackathon demo and extensible toward a production-grade system.

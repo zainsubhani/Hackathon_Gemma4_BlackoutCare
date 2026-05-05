@@ -65,7 +65,7 @@ export default function ExportsPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `carecontinuum-downtime-report-${Date.now()}.${format}`;
+      link.download = `blackoutcare-downtime-report-${Date.now()}.${format}`;
       link.click();
       URL.revokeObjectURL(url);
     } catch {

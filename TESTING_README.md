@@ -1,6 +1,6 @@
 # Backend Testing Guide
 
-This document explains the automated tests for the CareContinuum backend.
+This document explains the automated tests for the BlackoutCare backend.
 
 ## Why Tests Matter
 

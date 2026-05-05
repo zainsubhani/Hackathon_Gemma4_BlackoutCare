@@ -50,7 +50,7 @@ def ensure_development_schema():
 
 
 app = FastAPI(
-    title="CareContinuum API",
+    title="BlackoutCare API",
     description="Offline AI downtime OS for hospital clinical workflows",
     version="0.1.0",
     lifespan=lifespan,
@@ -80,7 +80,7 @@ app.include_router(dashboard_router)
 def health_check():
     return {
         "status": "ok",
-        "service": "carecontinuum-backend",
+        "service": "blackoutcare-backend",
         "mode": "downtime-ready",
     }
 

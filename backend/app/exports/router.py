@@ -55,7 +55,7 @@ def export_full_downtime_report_pdf(
 ):
     report = build_full_downtime_report(db)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    filename = f"carecontinuum-downtime-report_{timestamp}.pdf"
+    filename = f"blackoutcare-downtime-report_{timestamp}.pdf"
 
     create_event(
         db=db,

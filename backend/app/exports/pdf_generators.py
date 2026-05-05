@@ -57,8 +57,8 @@ def generate_downtime_pdf(report: dict) -> BytesIO:
     story = []
 
     # Header
-    story.append(Paragraph("CareContinuum Downtime Report", title_style))
-    story.append(Paragraph(_text(report.get("hospital_name", "CareContinuum Demo Hospital")), body_style))
+    story.append(Paragraph("BlackoutCare Downtime Report", title_style))
+    story.append(Paragraph(_text(report.get("hospital_name", "BlackoutCare Demo Hospital")), body_style))
     story.append(Paragraph("Offline clinical workflow continuity report", body_style))
     if report.get("generated_at"):
         story.append(Paragraph(f"Generated: {_text(report.get('generated_at'))}", body_style))

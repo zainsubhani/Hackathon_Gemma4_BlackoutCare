@@ -7,7 +7,7 @@ export default function HomePage() {
       <nav className="border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div>
-            <p className="text-xl font-bold">CareContinuum</p>
+            <p className="text-xl font-bold">BlackoutCare</p>
             <p className="text-xs text-slate-500">
               Offline AI Downtime OS for Hospitals
             </p>
@@ -42,7 +42,7 @@ export default function HomePage() {
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
-            CareContinuum helps clinicians triage patients, follow local
+            BlackoutCare helps clinicians triage patients, follow local
             protocols, generate structured notes, and export recovery reports
             during cyberattacks, ransomware incidents, and hospital IT outages.
           </p>
@@ -146,7 +146,7 @@ export default function HomePage() {
 
       {/* Workflow */}
       <section id="workflow" className="mx-auto max-w-7xl px-6 py-20">
-        <h2 className="text-3xl font-bold">How CareContinuum works</h2>
+        <h2 className="text-3xl font-bold">How BlackoutCare works</h2>
         <p className="mt-4 max-w-3xl text-slate-600">
           A local-first workflow that keeps essential clinical operations
           running during downtime.

@@ -1,6 +1,6 @@
-# CareContinuum Frontend
+# BlackoutCare Frontend
 
-CareContinuum frontend is a Next.js clinical downtime dashboard for operating during hospital IT outages. It connects to the FastAPI backend for authentication, patient registration, triage workflow management, protocol lookup, audit review, staff administration, and downtime report exports.
+BlackoutCare frontend is a Next.js clinical downtime dashboard for operating during hospital IT outages. It connects to the FastAPI backend for authentication, patient registration, triage workflow management, protocol lookup, audit review, staff administration, and downtime report exports.
 
 The interface is intentionally operational rather than marketing-focused: clinicians and coordinators should be able to sign in, register patients, create triage cases, analyze risk, review audit history, and export recovery documentation quickly.
 
