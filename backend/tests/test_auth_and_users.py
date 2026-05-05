@@ -43,3 +43,44 @@ def test_me_returns_authenticated_user(client, auth_headers):
 
     assert response.status_code == 200
     assert response.json()["staff_code"] == "DOC-TEST"
+
+
+def test_forgot_password_generates_temporary_password_that_can_login(client):
+    create_response = client.post(
+        "/users/",
+        json={
+            "full_name": "Nurse Jamie Lee",
+            "role": "nurse",
+            "department": "Emergency",
+            "staff_code": "nurse-321",
+            "password": "oldpassword",
+        },
+    )
+    assert create_response.status_code == 200
+
+    reset_response = client.post(
+        "/auth/forgot-password",
+        json={"staff_code": "nurse-321"},
+    )
+
+    assert reset_response.status_code == 200
+    reset_body = reset_response.json()
+    assert reset_body["staff_code"] == "NURSE-321"
+    assert len(reset_body["temporary_password"]) >= 6
+
+    old_login_response = client.post(
+        "/auth/login",
+        json={"staff_code": "NURSE-321", "password": "oldpassword"},
+    )
+    assert old_login_response.status_code == 401
+
+    new_login_response = client.post(
+        "/auth/login",
+        json={
+            "staff_code": "NURSE-321",
+            "password": reset_body["temporary_password"],
+        },
+    )
+
+    assert new_login_response.status_code == 200
+    assert new_login_response.json()["access_token"]
