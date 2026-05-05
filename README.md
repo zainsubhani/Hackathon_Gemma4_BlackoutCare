@@ -292,6 +292,13 @@ staff_code: DOC-900
 password: password123
 ```
 
+Full-access demo admin:
+
+```text
+staff_code: ADMIN-900
+password: password123
+```
+
 The seed script creates:
 
 - A demo doctor

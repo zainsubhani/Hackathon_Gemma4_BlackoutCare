@@ -19,6 +19,7 @@ from app.users.schemas import UserCreate
 
 
 DEMO_STAFF_CODE = "DOC-900"
+ADMIN_STAFF_CODE = "ADMIN-900"
 DEMO_PATIENT_CODE = "P-1001"
 DEMO_PASSWORD = "password123"
 
@@ -38,6 +39,19 @@ def main():
                     role="doctor",
                     department="Emergency",
                     staff_code=DEMO_STAFF_CODE,
+                    password=DEMO_PASSWORD,
+                ),
+            )
+
+        admin = user_crud.get_user_by_staff_code(db, ADMIN_STAFF_CODE)
+        if not admin:
+            admin = user_crud.create_user(
+                db,
+                UserCreate(
+                    full_name="BlackoutCare Administrator",
+                    role="admin",
+                    department="Operations",
+                    staff_code=ADMIN_STAFF_CODE,
                     password=DEMO_PASSWORD,
                 ),
             )
@@ -62,6 +76,8 @@ def main():
         case = _ensure_triage_case(db, doctor, patient)
 
         print("Seed data ready")
+        print(f"Admin staff_code: {ADMIN_STAFF_CODE}")
+        print(f"Admin password: {DEMO_PASSWORD}")
         print(f"Doctor staff_code: {DEMO_STAFF_CODE}")
         print(f"Doctor password: {DEMO_PASSWORD}")
         print(f"Patient code: {DEMO_PATIENT_CODE}")
@@ -104,13 +120,13 @@ def _ensure_triage_case(db, doctor: User, patient):
         db,
         TriageCaseCreate(
             patient_id=patient.id,
-            created_by=doctor.id,
             chief_complaint="Chest pain",
             symptoms="Shortness of breath and diaphoresis",
             vitals="BP 88/54, HR 122, SpO2 91%",
             urgency_level=UrgencyLevel.critical,
             status=CaseStatus.active,
         ),
+        created_by=doctor.id,
     )
 
 
