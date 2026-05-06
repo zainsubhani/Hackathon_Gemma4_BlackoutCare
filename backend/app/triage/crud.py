@@ -4,8 +4,15 @@ from sqlalchemy.orm import Session
 from app.patients.models import Patient
 from app.incidents.models import DowntimeIncident
 from app.users.models import User
-from app.triage.models import TriageCase
-from app.triage.schemas import TriageCaseCreate, CaseStatus, TriageCaseUpdate
+from app.triage.models import ProtocolChecklistItem, TriageCase, VitalsEntry
+from app.triage.schemas import (
+    CaseStatus,
+    ProtocolChecklistCreate,
+    ProtocolChecklistUpdate,
+    TriageCaseCreate,
+    TriageCaseUpdate,
+    VitalsEntryCreate,
+)
 from app.events.crud import create_event
 
 
@@ -134,3 +141,106 @@ def update_triage_case(
         event_data=update_data,
     )
     return db_case
+
+
+def create_vitals_entry(db: Session, case_id: int, payload: VitalsEntryCreate, recorded_by: int):
+    db_case = get_triage_case(db, case_id)
+    if not db_case:
+        raise HTTPException(status_code=404, detail="Triage case not found")
+
+    entry = VitalsEntry(
+        case_id=case_id,
+        recorded_by=recorded_by,
+        temperature_c=payload.temperature_c,
+        heart_rate=payload.heart_rate,
+        blood_pressure=payload.blood_pressure,
+        respiratory_rate=payload.respiratory_rate,
+        oxygen_saturation=payload.oxygen_saturation,
+        pain_score=payload.pain_score,
+        trend=payload.trend.value,
+        notes=payload.notes,
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    create_event(
+        db=db,
+        event_type="VITALS_ENTRY_CREATED",
+        actor_id=recorded_by,
+        case_id=case_id,
+        event_data={
+            "trend": payload.trend.value,
+            "heart_rate": payload.heart_rate,
+            "blood_pressure": payload.blood_pressure,
+            "oxygen_saturation": payload.oxygen_saturation,
+        },
+    )
+    return entry
+
+
+def get_vitals_entries(db: Session, case_id: int):
+    if not get_triage_case(db, case_id):
+        raise HTTPException(status_code=404, detail="Triage case not found")
+    return (
+        db.query(VitalsEntry)
+        .filter(VitalsEntry.case_id == case_id)
+        .order_by(VitalsEntry.created_at.asc())
+        .all()
+    )
+
+
+def create_checklist_item(db: Session, case_id: int, payload: ProtocolChecklistCreate, created_by: int):
+    if not get_triage_case(db, case_id):
+        raise HTTPException(status_code=404, detail="Triage case not found")
+
+    item = ProtocolChecklistItem(
+        case_id=case_id,
+        protocol_id=payload.protocol_id,
+        label=payload.label,
+        created_by=created_by,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    create_event(
+        db=db,
+        event_type="PROTOCOL_CHECKLIST_ITEM_CREATED",
+        actor_id=created_by,
+        case_id=case_id,
+        event_data={"protocol_id": payload.protocol_id, "label": payload.label},
+    )
+    return item
+
+
+def get_checklist_items(db: Session, case_id: int):
+    if not get_triage_case(db, case_id):
+        raise HTTPException(status_code=404, detail="Triage case not found")
+    return (
+        db.query(ProtocolChecklistItem)
+        .filter(ProtocolChecklistItem.case_id == case_id)
+        .order_by(ProtocolChecklistItem.created_at.asc())
+        .all()
+    )
+
+
+def update_checklist_item(db: Session, item_id: int, payload: ProtocolChecklistUpdate, actor_id: int):
+    item = db.query(ProtocolChecklistItem).filter(ProtocolChecklistItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Checklist item not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        if hasattr(value, "value"):
+            value = value.value
+        setattr(item, field, value)
+    item.updated_by = actor_id
+    db.commit()
+    db.refresh(item)
+    create_event(
+        db=db,
+        event_type="PROTOCOL_CHECKLIST_ITEM_UPDATED",
+        actor_id=actor_id,
+        case_id=item.case_id,
+        event_data={"item_id": item.id, **update_data},
+    )
+    return item

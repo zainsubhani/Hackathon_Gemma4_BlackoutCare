@@ -88,3 +88,51 @@ def update_triage_case(
         payload,
         actor_id=current_user.id,
     )
+
+
+@router.post("/{case_id}/vitals", response_model=schemas.VitalsEntryResponse)
+def create_vitals_entry(
+    case_id: int,
+    payload: schemas.VitalsEntryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return crud.create_vitals_entry(db, case_id, payload, recorded_by=current_user.id)
+
+
+@router.get("/{case_id}/vitals", response_model=list[schemas.VitalsEntryResponse])
+def get_vitals_entries(
+    case_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return crud.get_vitals_entries(db, case_id)
+
+
+@router.post("/{case_id}/checklist", response_model=schemas.ProtocolChecklistResponse)
+def create_checklist_item(
+    case_id: int,
+    payload: schemas.ProtocolChecklistCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return crud.create_checklist_item(db, case_id, payload, created_by=current_user.id)
+
+
+@router.get("/{case_id}/checklist", response_model=list[schemas.ProtocolChecklistResponse])
+def get_checklist_items(
+    case_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return crud.get_checklist_items(db, case_id)
+
+
+@router.patch("/checklist/{item_id}", response_model=schemas.ProtocolChecklistResponse)
+def update_checklist_item(
+    item_id: int,
+    payload: schemas.ProtocolChecklistUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return crud.update_checklist_item(db, item_id, payload, actor_id=current_user.id)

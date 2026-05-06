@@ -4,7 +4,7 @@ This document explains the automated tests for the BlackoutCare backend.
 
 ## Why Tests Matter
 
-The backend handles clinical downtime workflows, authentication, AI fallback behavior, audit events, and exports. Tests make sure the core promises keep working as the code changes.
+The backend handles clinical downtime workflows, authentication, AI fallback behavior, audit events, recovery sync, and exports. Tests make sure the core promises keep working as the code changes.
 
 For this project, tests are especially useful because they catch issues such as:
 
@@ -15,6 +15,8 @@ For this project, tests are especially useful because they catch issues such as:
 - Protocol search returning incorrect matches
 - AI/Ollama failures crashing the API instead of returning safe fallback guidance
 - PDF export generation breaking
+- Recovery sync items being updated against the wrong incident
+- Audit hash-chain fields missing from important events
 
 ## Test Strategy
 
@@ -24,6 +26,8 @@ Current coverage includes:
 
 - User creation hashes passwords
 - Login returns a bearer token
+- Password changes and offline password reset behavior
+- Disabled users cannot authenticate or continue using protected routes
 - Protected patient routes require authentication
 - Protocol creation requires an admin/coordinator role
 - Protocol search returns keyword matches
@@ -32,6 +36,11 @@ Current coverage includes:
 - Patient creation writes a `PATIENT_CREATED` audit event
 - Triage status update writes a `TRIAGE_STATUS_UPDATED` audit event
 - JSON export writes a `DOWNTIME_REPORT_EXPORTED` audit event
+- Dashboard summary counts
+- Incident creation and active incident lookup
+- Case notes and global search
+- Recovery sync preview and incident validation
+- FHIR-like recovery bundle generation
 
 ## Test Database
 
@@ -93,7 +102,11 @@ Good next tests:
 - Invalid login returns `401`
 - Expired/invalid token returns `401`
 - Pagination and filtering behavior for list endpoints
+- Vitals entry creation writes an audit event
+- Protocol checklist creation and status update writes audit events
+- Operations readiness, handoff, timeline, recovery conflict, and AI oversight endpoints
+- Role authorization edge cases for staff, audit, and recovery routes
 
 ## Recruiter/Judge Summary
 
-These tests show that the backend is not only a working demo, but has engineering checks around the most important behavior: auth, clinical workflow protection, protocol search, AI failure safety, and exports.
+These tests show that the backend is not only a working demo, but has engineering checks around the most important behavior: auth, clinical workflow protection, protocol search, AI failure safety, recovery sync, auditability, and exports.

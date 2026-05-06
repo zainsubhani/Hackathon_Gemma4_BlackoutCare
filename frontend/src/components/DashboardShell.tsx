@@ -5,6 +5,7 @@ import {
   Bell,
   BookOpen,
   ClipboardList,
+  ClipboardCheck,
   Download,
   Grid2X2,
   RefreshCcw,
@@ -38,6 +39,7 @@ const navItems = [
   { label: "Safety Board", icon: ShieldAlert, href: "/safety", section: "safety" },
   { label: "Patients", icon: UsersRound, href: "/patients", section: "patients" },
   { label: "Triage", icon: Stethoscope, href: "/triage", section: "triage" },
+  { label: "Operations", icon: ClipboardCheck, href: "/operations", section: "operations" },
   { label: "Protocols", icon: BookOpen, href: "/protocols", section: "protocols" },
   { label: "Audit Log", icon: ClipboardList, href: "/audit", section: "audit", roles: ["admin", "coordinator"] },
   { label: "Exports", icon: Download, href: "/exports", section: "exports" },
@@ -50,6 +52,7 @@ export type DashboardSection =
   | "safety"
   | "patients"
   | "triage"
+  | "operations"
   | "protocols"
   | "audit"
   | "exports"

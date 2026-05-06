@@ -1,6 +1,18 @@
 "use client";
 
-import { API_URL, apiFetch, formatDateTime, getToken, titleCase, type AIAnalysisResult, type CaseNote, type Patient, type TriageCase } from "@/lib/api";
+import {
+  API_URL,
+  apiFetch,
+  formatDateTime,
+  getToken,
+  titleCase,
+  type AIAnalysisResult,
+  type CaseNote,
+  type Patient,
+  type ProtocolChecklistItem,
+  type TriageCase,
+  type VitalsEntry,
+} from "@/lib/api";
 import { ChevronDown, Filter, Plus, UserRound } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -12,7 +24,11 @@ export default function TriagePage() {
   const [selectedCase, setSelectedCase] = useState<TriageCase | null>(null);
   const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(null);
   const [notes, setNotes] = useState<CaseNote[]>([]);
+  const [vitalsEntries, setVitalsEntries] = useState<VitalsEntry[]>([]);
+  const [checklist, setChecklist] = useState<ProtocolChecklistItem[]>([]);
   const [noteForm, setNoteForm] = useState({ note_type: "clinical", content: "" });
+  const [vitalsForm, setVitalsForm] = useState({ blood_pressure: "", heart_rate: "", respiratory_rate: "", oxygen_saturation: "", temperature_c: "", pain_score: "", trend: "unknown", notes: "" });
+  const [checklistForm, setChecklistForm] = useState({ label: "" });
   const [reviewForm, setReviewForm] = useState({ review_status: "accepted", review_note: "" });
   const [analysisError, setAnalysisError] = useState("");
   const [urgency, setUrgency] = useState("");
@@ -103,10 +119,16 @@ export default function TriagePage() {
     setAnalysis(null);
     setAnalysisError("");
     try {
-      const data = await apiFetch<TriageCase>(`/triage/cases/${caseId}`);
-      const noteData = await apiFetch<CaseNote[]>(`/triage/cases/${caseId}/notes/`);
+      const [data, noteData, vitalsData, checklistData] = await Promise.all([
+        apiFetch<TriageCase>(`/triage/cases/${caseId}`),
+        apiFetch<CaseNote[]>(`/triage/cases/${caseId}/notes/`),
+        apiFetch<VitalsEntry[]>(`/triage/cases/${caseId}/vitals`),
+        apiFetch<ProtocolChecklistItem[]>(`/triage/cases/${caseId}/checklist`),
+      ]);
       setSelectedCase(data);
       setNotes(noteData);
+      setVitalsEntries(vitalsData);
+      setChecklist(checklistData);
       setEditForm({
         chief_complaint: data.chief_complaint,
         symptoms: data.symptoms || "",
@@ -116,6 +138,59 @@ export default function TriagePage() {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load triage case");
+    }
+  }
+
+  async function createVitalsEntry(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedCase) return;
+
+    try {
+      const entry = await apiFetch<VitalsEntry>(`/triage/cases/${selectedCase.id}/vitals`, {
+        method: "POST",
+        body: JSON.stringify({
+          blood_pressure: vitalsForm.blood_pressure || null,
+          heart_rate: vitalsForm.heart_rate || null,
+          respiratory_rate: vitalsForm.respiratory_rate || null,
+          oxygen_saturation: vitalsForm.oxygen_saturation || null,
+          temperature_c: vitalsForm.temperature_c || null,
+          pain_score: vitalsForm.pain_score || null,
+          trend: vitalsForm.trend,
+          notes: vitalsForm.notes || null,
+        }),
+      });
+      setVitalsEntries((items) => [...items, entry]);
+      setVitalsForm({ blood_pressure: "", heart_rate: "", respiratory_rate: "", oxygen_saturation: "", temperature_c: "", pain_score: "", trend: "unknown", notes: "" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to record vitals");
+    }
+  }
+
+  async function createChecklistItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedCase) return;
+
+    try {
+      const item = await apiFetch<ProtocolChecklistItem>(`/triage/cases/${selectedCase.id}/checklist`, {
+        method: "POST",
+        body: JSON.stringify({ label: checklistForm.label }),
+      });
+      setChecklist((items) => [...items, item]);
+      setChecklistForm({ label: "" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to add protocol action");
+    }
+  }
+
+  async function updateChecklistItem(item: ProtocolChecklistItem, status: ProtocolChecklistItem["status"]) {
+    try {
+      const updated = await apiFetch<ProtocolChecklistItem>(`/triage/cases/checklist/${item.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      setChecklist((items) => items.map((entry) => (entry.id === updated.id ? updated : entry)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update protocol action");
     }
   }
 
@@ -316,8 +391,80 @@ export default function TriagePage() {
             </form>
             {analysisError && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">{analysisError}</div>}
             {analysis && <AnalysisPanel analysis={analysis} reviewForm={reviewForm} setReviewForm={setReviewForm} onReview={reviewRecommendation} />}
+            <section className="mt-5 grid gap-5 xl:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-lg font-black">Vitals Timeline</h3>
+                <form onSubmit={createVitalsEntry} className="mt-4 grid gap-3 md:grid-cols-2">
+                  <Input label="Blood Pressure" value={vitalsForm.blood_pressure} onChange={(value) => setVitalsForm({ ...vitalsForm, blood_pressure: value })} />
+                  <Input label="Heart Rate" value={vitalsForm.heart_rate} onChange={(value) => setVitalsForm({ ...vitalsForm, heart_rate: value })} />
+                  <Input label="Resp. Rate" value={vitalsForm.respiratory_rate} onChange={(value) => setVitalsForm({ ...vitalsForm, respiratory_rate: value })} />
+                  <Input label="O2 Sat" value={vitalsForm.oxygen_saturation} onChange={(value) => setVitalsForm({ ...vitalsForm, oxygen_saturation: value })} />
+                  <Input label="Temp C" value={vitalsForm.temperature_c} onChange={(value) => setVitalsForm({ ...vitalsForm, temperature_c: value })} />
+                  <Input label="Pain Score" value={vitalsForm.pain_score} onChange={(value) => setVitalsForm({ ...vitalsForm, pain_score: value })} />
+                  <Select label="Trend" value={vitalsForm.trend} onChange={(value) => setVitalsForm({ ...vitalsForm, trend: value })} options={["unknown", "unchanged", "improving", "worsening"]} />
+                  <Input label="Notes" value={vitalsForm.notes} onChange={(value) => setVitalsForm({ ...vitalsForm, notes: value })} />
+                  <div className="md:col-span-2">
+                    <button className="h-11 w-full rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800">Record Vitals</button>
+                  </div>
+                </form>
+                <div className="mt-4 grid gap-3">
+                  {vitalsEntries.map((entry) => (
+                    <article key={entry.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-black text-slate-700">{titleCase(entry.trend)} trend</p>
+                        <p className="text-xs text-slate-500">{formatDateTime(entry.created_at)}</p>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-slate-700">
+                        {[entry.blood_pressure && `BP ${entry.blood_pressure}`, entry.heart_rate && `HR ${entry.heart_rate}`, entry.oxygen_saturation && `O2 ${entry.oxygen_saturation}`, entry.respiratory_rate && `RR ${entry.respiratory_rate}`, entry.temperature_c && `Temp ${entry.temperature_c}C`, entry.pain_score && `Pain ${entry.pain_score}`].filter(Boolean).join(" - ") || "Vitals recorded"}
+                      </p>
+                      {entry.notes && <p className="mt-2 text-sm text-slate-500">{entry.notes}</p>}
+                    </article>
+                  ))}
+                  {vitalsEntries.length === 0 && <p className="text-sm text-slate-500">No vitals entries yet.</p>}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-lg font-black">Protocol Action Checklist</h3>
+                <form onSubmit={createChecklistItem} className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem]">
+                  <input required value={checklistForm.label} onChange={(event) => setChecklistForm({ label: event.target.value })} placeholder="Add protocol action..." className="h-11 rounded-xl border border-slate-200 px-3 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100" />
+                  <button className="h-11 rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800">Add Action</button>
+                </form>
+                <div className="mt-4 grid gap-3">
+                  {checklist.map((item) => (
+                    <article key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-black text-slate-700">{item.label}</p>
+                          {item.clinician_note && <p className="mt-2 text-sm text-slate-500">{item.clinician_note}</p>}
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-2">
+                          {["pending", "done", "skipped"].map((statusOption) => (
+                            <button key={statusOption} type="button" onClick={() => updateChecklistItem(item, statusOption as ProtocolChecklistItem["status"])} className={`rounded-lg border px-3 py-1 text-xs font-bold ${item.status === statusOption ? "border-teal-200 bg-teal-50 text-teal-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                              {titleCase(statusOption)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                  {checklist.length === 0 && <p className="text-sm text-slate-500">No protocol actions yet.</p>}
+                </div>
+              </div>
+            </section>
             <section className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <h3 className="text-lg font-black">Case Notes Timeline</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {[
+                  { label: "SBAR", content: "Situation: \nBackground: \nAssessment: \nRecommendation: " },
+                  { label: "Escalation", content: "Escalated to: \nReason: \nImmediate actions: " },
+                  { label: "Handoff", content: "Handoff risks: \nPending actions: \nNext review time: " },
+                ].map((template) => (
+                  <button key={template.label} type="button" onClick={() => setNoteForm({ note_type: template.label === "Escalation" ? "escalation" : "handoff", content: template.content })} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">
+                    {template.label}
+                  </button>
+                ))}
+              </div>
               <form onSubmit={createNote} className="mt-4 grid gap-3 md:grid-cols-[12rem_minmax(0,1fr)_9rem]">
                 <select value={noteForm.note_type} onChange={(event) => setNoteForm({ ...noteForm, note_type: event.target.value })} className="h-11 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100">
                   {["clinical", "vitals", "handoff", "escalation"].map((item) => <option key={item} value={item}>{titleCase(item)}</option>)}

@@ -1,8 +1,8 @@
 # BlackoutCare Frontend
 
-BlackoutCare frontend is a Next.js clinical downtime dashboard for operating during hospital IT outages. It connects to the FastAPI backend for authentication, patient registration, triage workflow management, protocol lookup, audit review, staff administration, and downtime report exports.
+BlackoutCare frontend is a Next.js clinical downtime dashboard for operating during hospital IT outages. It connects to the FastAPI backend for authentication, patient registration, triage workflow management, vitals tracking, protocol lookup, protocol action checklists, operations handoff, audit review, staff administration, recovery review, and downtime report exports.
 
-The interface is intentionally operational rather than marketing-focused: clinicians and coordinators should be able to sign in, register patients, create triage cases, analyze risk, review audit history, and export recovery documentation quickly.
+The interface is intentionally operational rather than marketing-focused: clinicians and coordinators should be able to sign in, register patients, create triage cases, record vitals, analyze risk, review handoff gaps, inspect audit history, and export recovery documentation quickly.
 
 ## Technology
 
@@ -63,11 +63,14 @@ frontend/src/
     page.tsx              Landing page
     login/page.tsx        Staff login
     dashboard/page.tsx    Operations overview
+    safety/page.tsx       Patient Safety Board
     patients/page.tsx     Patient registry
     triage/page.tsx       Triage workflow
+    operations/page.tsx   Readiness, handoff, timeline, recovery gaps, AI oversight
     protocols/page.tsx    Protocol library
     audit/page.tsx        Audit log
     exports/page.tsx      Report downloads
+    recovery/page.tsx     Recovery Sync Center
     staff/page.tsx        Staff administration
   components/
     DashboardShell.tsx    Shared protected app shell
@@ -103,6 +106,8 @@ GET /auth/me
 - Mobile navigation
 - Top search/status/user bar
 - System status indicator from `GET /status`
+- Operations alert dropdown from `GET /operations/alerts`
+- Global search from `GET /operations/search`
 - Current user display from `GET /auth/me`
 - Protected route behavior
 - Avatar dropdown and sign out
@@ -124,6 +129,7 @@ Purpose:
 - Gives a command-center overview of downtime operations.
 - Shows patient, triage, critical case, protocol, and audit metrics.
 - Lists recent triage cases and audit events.
+- Starts or resolves downtime incident mode.
 
 Backend endpoints:
 
@@ -132,6 +138,28 @@ GET /dashboard/summary
 GET /patients/
 GET /triage/cases/
 GET /events/
+GET /incidents/active
+POST /incidents/
+PATCH /incidents/{incident_id}
+```
+
+### Safety Board
+
+Route:
+
+```text
+/safety
+```
+
+Purpose:
+
+- Surfaces critical cases, unknown allergies, stale notes, unassigned urgency, pending AI reviews, and recovery gaps.
+- Helps staff find dangerous omissions during downtime.
+
+Backend endpoint:
+
+```text
+GET /operations/safety-board
 ```
 
 ### Patients
@@ -172,7 +200,12 @@ Purpose:
 - Creates new triage cases for existing patients.
 - Opens case details.
 - Updates case status.
+- Records repeated vitals entries and trend direction.
+- Adds clinical, vitals, handoff, and escalation notes.
+- Uses quick templates for SBAR, escalation, and handoff notes.
+- Manages protocol action checklist items.
 - Runs AI analysis for a case.
+- Reviews AI recommendations as accepted, rejected, or needs review.
 - Downloads per-case JSON/PDF exports.
 
 Backend endpoints:
@@ -182,9 +215,44 @@ GET   /triage/cases/
 POST  /triage/cases/
 GET   /triage/cases/{case_id}
 PATCH /triage/cases/{case_id}/status
+PATCH /triage/cases/{case_id}
+GET   /triage/cases/{case_id}/notes/
+POST  /triage/cases/{case_id}/notes/
+GET   /triage/cases/{case_id}/vitals
+POST  /triage/cases/{case_id}/vitals
+GET   /triage/cases/{case_id}/checklist
+POST  /triage/cases/{case_id}/checklist
+PATCH /triage/cases/checklist/{item_id}
 POST  /triage/cases/{case_id}/analyze
+PATCH /ai/recommendations/{recommendation_id}/review
 GET   /exports/triage-case/{case_id}
 GET   /exports/triage-case/{case_id}/pdf
+```
+
+### Operations Cockpit
+
+Route:
+
+```text
+/operations
+```
+
+Purpose:
+
+- Shows offline readiness checks for database, protocols, staff, local AI, and exports.
+- Builds a shift handoff list with latest notes, latest vitals, open protocol actions, and priority.
+- Displays incident timeline entries from audit events.
+- Reviews recovery conflicts such as missing patient details, unknown allergies, open cases, and unreviewed AI output.
+- Summarizes AI oversight by review status and confidence.
+
+Backend endpoints:
+
+```text
+GET /operations/readiness
+GET /operations/handoff
+GET /operations/timeline
+GET /operations/recovery-conflicts
+GET /operations/ai-oversight
 ```
 
 ### Protocols
@@ -244,6 +312,7 @@ Purpose:
 
 - Shows report summary counts.
 - Downloads full downtime reports in JSON and PDF formats.
+- Supports recovery documentation workflows after systems come back online.
 
 Backend endpoints:
 
@@ -252,6 +321,28 @@ GET /patients/
 GET /triage/cases/
 GET /exports/downtime-report
 GET /exports/downtime-report/pdf
+```
+
+### Recovery Sync Center
+
+Route:
+
+```text
+/recovery
+```
+
+Purpose:
+
+- Previews incident-specific records that need sync or manual entry.
+- Updates sync status for patients, triage cases, notes, and AI recommendations.
+- Downloads a FHIR-like recovery bundle.
+
+Backend endpoints:
+
+```text
+GET   /recovery/incidents/{incident_id}/sync-preview
+GET   /recovery/incidents/{incident_id}/fhir-bundle
+PATCH /recovery/sync-status
 ```
 
 ### Staff Admin
@@ -323,8 +414,11 @@ Expected routes generated by the build:
 /dashboard
 /exports
 /login
+/operations
 /patients
 /protocols
+/recovery
+/safety
 /staff
 /triage
 ```
@@ -337,3 +431,4 @@ Expected routes generated by the build:
 - Hide Staff Admin navigation for non-admin/non-coordinator users.
 - Add frontend integration tests for login, patient registration, triage, and export flows.
 - Generate frontend TypeScript types from the backend OpenAPI schema.
+- Add realtime updates for safety, operations, and triage views.

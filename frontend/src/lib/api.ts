@@ -204,6 +204,98 @@ export type OperationAlert = {
   created_at: string;
 };
 
+export type VitalsEntry = {
+  id: number;
+  case_id: number;
+  recorded_by: number;
+  temperature_c: string | null;
+  heart_rate: string | null;
+  blood_pressure: string | null;
+  respiratory_rate: string | null;
+  oxygen_saturation: string | null;
+  pain_score: string | null;
+  trend: "improving" | "unchanged" | "worsening" | "unknown";
+  notes: string | null;
+  created_at: string;
+};
+
+export type ProtocolChecklistItem = {
+  id: number;
+  case_id: number;
+  protocol_id: number | null;
+  label: string;
+  status: "pending" | "done" | "skipped";
+  clinician_note: string | null;
+  created_by: number;
+  updated_by: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ReadinessReport = {
+  mode: string;
+  open_cases: number;
+  pending_ai_reviews: number;
+  checks: Array<{
+    key: string;
+    label: string;
+    status: "ok" | "warning" | "unavailable";
+    detail: string;
+  }>;
+};
+
+export type HandoffReport = {
+  generated_at: string;
+  summary: {
+    active_cases: number;
+    critical: number;
+    escalated: number;
+    open_protocol_actions: number;
+  };
+  cases: Array<SafetyCase & {
+    last_note: string | null;
+    last_note_at: string | null;
+    last_vitals: { summary: string; trend: string; created_at: string } | null;
+    open_protocol_actions: number;
+    handoff_priority: number;
+  }>;
+};
+
+export type TimelineEvent = {
+  id: number;
+  event_type: string;
+  case_id: number | null;
+  actor_id: number | null;
+  description: string;
+  created_at: string;
+};
+
+export type RecoveryConflictReport = {
+  incident_id: number | null;
+  total: number;
+  items: Array<{
+    type: string;
+    severity: "critical" | "warning" | "info";
+    label: string;
+    description: string;
+    href: string;
+  }>;
+};
+
+export type AIOversightReport = {
+  summary: Record<string, number>;
+  confidence: Record<string, number>;
+  recent: Array<{
+    id: number;
+    case_id: number;
+    urgency: string;
+    confidence: string;
+    review_status: string;
+    risk_summary: string;
+    created_at: string;
+  }>;
+};
+
 export type SearchItem = {
   id: number;
   label: string;

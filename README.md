@@ -2,7 +2,7 @@
 
 BlackoutCare is a full-stack offline hospital downtime copilot. It is designed for scenarios where clinical teams lose access to normal hospital systems during outages, cyberattacks, or degraded network conditions.
 
-The project includes a FastAPI backend and a Next.js frontend for structured downtime workflows: users, patients, triage cases, clinical protocols, AI-assisted recommendations, audit events, staff administration, and recovery exports.
+The project includes a FastAPI backend and a Next.js frontend for structured downtime workflows: users, patients, triage cases, vitals tracking, clinical protocols, protocol action checklists, AI-assisted recommendations, handoff summaries, audit events, staff administration, recovery review, and exports.
 
 ## Problem
 
@@ -12,8 +12,12 @@ BlackoutCare addresses this gap by providing a local-first API that supports:
 
 - Downtime patient registration
 - Clinical triage workflow continuity
+- Vitals timeline and case note documentation
 - Protocol-aware AI decision support
+- Protocol-to-action checklists
+- Shift handoff and operations readiness summaries
 - Structured audit logging
+- Recovery conflict review
 - Exportable recovery reports
 - PDF downtime documentation
 
@@ -26,8 +30,10 @@ This project does not replace clinicians, hospital policy, or EHR systems. It is
 - Protected dashboard routes with JWT session checks
 - Shared clinical dashboard shell with sidebar, topbar, system status, and sign out
 - Patient registry and patient creation
-- Triage case creation, status updates, AI analysis, and per-case exports
+- Triage case creation, status updates, vitals timeline, protocol checklist, AI analysis, notes, and per-case exports
 - Protocol creation and protocol keyword search
+- Operations cockpit for handoff, readiness, incident timeline, recovery review, and AI oversight
+- Patient Safety Board for critical cases, unknown allergies, stale notes, unassigned urgency, pending AI reviews, and recovery gaps
 - Audit event review and case-specific audit lookup
 - Full downtime report exports in JSON and PDF
 - Staff administration for user listing and creation
@@ -36,6 +42,7 @@ This project does not replace clinicians, hospital policy, or EHR systems. It is
 
 - JWT login via staff code and password
 - Password hashing with Passlib and bcrypt
+- Offline password reset using a configured master reset secret
 - Role-aware authorization helpers
 - Protected clinical, protocol, event, and export routes
 
@@ -55,6 +62,9 @@ This project does not replace clinicians, hospital policy, or EHR systems. It is
 
 - Create and update triage cases
 - Track urgency and status
+- Record repeated vitals entries and trend direction
+- Add clinical, vitals, handoff, and escalation notes
+- Manage per-case protocol action checklist items
 - Analyze cases using local AI support
 - Automatically associate new triage cases with the authenticated user
 
@@ -63,13 +73,33 @@ This project does not replace clinicians, hospital policy, or EHR systems. It is
 - Store local clinical downtime protocols
 - Search protocols by trigger keywords
 - Attach matched protocol context to AI triage prompts
+- Track protocol actions as pending, done, or skipped inside a case workflow
 
 ### AI Decision Support
 
 - Calls a local Ollama/Gemma endpoint
 - Builds protocol-grounded prompts
 - Parses structured JSON recommendations
+- Stores clinician review status, reviewer, timestamp, and review note
+- Supports oversight reporting across accepted, rejected, pending, and needs-review recommendations
 - Returns safe fallback guidance if Ollama is down or returns invalid output
+
+### Operations and Safety
+
+- Global search across patients, triage cases, protocols, and incidents
+- Alert feed for critical cases, escalated cases, pending AI reviews, and failed events
+- Offline readiness checks for local database, protocol library, staff access, local AI, and exports
+- Shift handoff summary for active cases, latest notes, latest vitals, open protocol actions, and priority scoring
+- Incident timeline built from audit events
+- Recovery conflict review for missing patient details, unknown allergies, open cases, and unreviewed AI output
+- Patient Safety Board for dangerous clinical and recovery gaps
+
+### Recovery Sync
+
+- Incident-specific sync preview
+- Patient, triage case, note, and AI recommendation sync status tracking
+- FHIR-like recovery bundle export
+- Recovery item validation so records cannot be marked synced against the wrong incident
 
 ### Audit Events
 
@@ -79,9 +109,18 @@ The backend records audit events for important actions, including:
 - Patient creation
 - Triage case creation
 - Triage status updates
+- Triage case edits
+- Vitals entry creation
+- Protocol checklist item creation and updates
+- Case note creation
 - Protocol creation
 - AI recommendation success or failure
+- AI recommendation review
 - Report exports
+- Recovery sync status updates
+- Password reset and password changes
+
+Audit events include tamper-evident hash chaining with previous and current event hashes. This does not make the database impossible to alter, but it helps detect unauthorized modification because changing one event breaks the chain.
 
 ### Exports
 
@@ -89,6 +128,8 @@ The backend records audit events for important actions, including:
 - PDF downtime reports
 - Single triage case exports
 - Full hospital downtime report exports
+- Incident PDF exports
+- FHIR-like recovery bundle exports
 - Generated timestamps, hospital label, summary metrics, and critical case counts
 
 ## Architecture
@@ -101,11 +142,14 @@ frontend/
     app/
       login/
       dashboard/
+      safety/
       patients/
       triage/
+      operations/
       protocols/
       audit/
       exports/
+      recovery/
       staff/
     components/
       DashboardShell.tsx
@@ -138,7 +182,17 @@ backend/
       crud.py
       service.py
       router.py
+    notes/
+      models.py
+      schemas.py
+      crud.py
+      router.py
     protocols/
+      models.py
+      schemas.py
+      crud.py
+      router.py
+    incidents/
       models.py
       schemas.py
       crud.py
@@ -147,6 +201,7 @@ backend/
       models.py
       schemas.py
       crud.py
+      router.py
       service.py
     events/
       models.py
@@ -157,6 +212,12 @@ backend/
       router.py
       service.py
       pdf_generators.py
+    recovery/
+      router.py
+      schemas.py
+      service.py
+    operations/
+      router.py
     dashboard/
       router.py
     main.py
@@ -354,16 +415,39 @@ POST   /triage/cases/
 GET    /triage/cases/{case_id}
 POST   /triage/cases/{case_id}/analyze
 PATCH  /triage/cases/{case_id}/status
+PATCH  /triage/cases/{case_id}
+GET    /triage/cases/{case_id}/notes/
+POST   /triage/cases/{case_id}/notes/
+GET    /triage/cases/{case_id}/vitals
+POST   /triage/cases/{case_id}/vitals
+GET    /triage/cases/{case_id}/checklist
+POST   /triage/cases/{case_id}/checklist
+PATCH  /triage/cases/checklist/{item_id}
 GET    /protocols/
 POST   /protocols/
 GET    /protocols/{protocol_id}
 POST   /protocols/search
+GET    /operations/search
+GET    /operations/alerts
+GET    /operations/safety-board
+GET    /operations/readiness
+GET    /operations/handoff
+GET    /operations/timeline
+GET    /operations/recovery-conflicts
+GET    /operations/ai-oversight
+GET    /incidents/active
+POST   /incidents/
+PATCH  /incidents/{incident_id}
 GET    /events/
 GET    /events/case/{case_id}
 GET    /exports/downtime-report
 GET    /exports/downtime-report/pdf
 GET    /exports/triage-case/{case_id}
 GET    /exports/triage-case/{case_id}/pdf
+GET    /recovery/incidents/{incident_id}/sync-preview
+GET    /recovery/incidents/{incident_id}/fhir-bundle
+PATCH  /recovery/sync-status
+PATCH  /ai/recommendations/{recommendation_id}/review
 ```
 
 List endpoints support basic pagination with `skip` and `limit`. Several routes also support lightweight filters:
@@ -374,7 +458,42 @@ GET /triage/cases/?status=active&urgency_level=critical
 GET /protocols/?category=emergency
 GET /events/?event_type=PATIENT_CREATED
 GET /users/?role=doctor
+GET /operations/timeline?incident_id=1
+GET /operations/recovery-conflicts?incident_id=1
 ```
+
+## Main Frontend Routes
+
+```text
+/login       Staff login and offline password reset
+/dashboard   Command center and downtime incident mode
+/safety      Patient Safety Board
+/patients    Downtime patient registry
+/triage      Triage workflow, vitals, notes, protocol actions, AI review, case exports
+/operations  Readiness, shift handoff, timeline, recovery conflicts, and AI oversight
+/protocols   Local clinical protocol library
+/audit       Audit log and case-specific event lookup
+/exports     Downtime report downloads
+/recovery    Recovery Sync Center and FHIR-like bundle export
+/staff       Staff administration
+```
+
+## Typical Demo Flow
+
+1. Start Docker or run Postgres/Ollama/backend/frontend locally.
+2. Run the demo seed script.
+3. Log in as `ADMIN-900` or `DOC-900`.
+4. Open `/dashboard` and start or inspect downtime incident mode.
+5. Register or inspect a patient in `/patients`.
+6. Create or open a triage case in `/triage`.
+7. Record vitals and add a clinical note.
+8. Add protocol checklist actions and mark actions pending, done, or skipped.
+9. Run AI analysis, then accept, reject, or mark the recommendation as needing review.
+10. Open `/safety` to show clinical risk gaps.
+11. Open `/operations` to show readiness, shift handoff, incident timeline, recovery conflicts, and AI oversight.
+12. Open `/recovery` to review sync readiness and export a FHIR-like bundle.
+13. Export JSON or PDF downtime reports from `/exports`.
+14. Review audit events in `/audit`.
 
 ## Safety and Clinical Boundaries
 
@@ -384,11 +503,12 @@ BlackoutCare intentionally frames AI responses as decision support:
 - It does not replace clinicians.
 - It uses local protocol context when available.
 - It highlights uncertainty when patient data is missing.
+- It requires clinician review for stored recommendations.
 - It returns safe fallback guidance if AI inference is unavailable.
 
 ## Current Engineering Status
 
-BlackoutCare is hackathon-demo ready. It includes authentication, protected frontend workflows, local AI integration, audit logging, exports, Dockerized backend infrastructure, and a focused pytest suite.
+BlackoutCare is hackathon-demo ready. It includes authentication, protected frontend workflows, local AI integration, triage vitals tracking, protocol action checklists, shift handoff, operations readiness, recovery conflict review, AI oversight, audit logging, exports, Dockerized backend infrastructure, and a focused pytest suite.
 
 Frontend workflow documentation is available in:
 
@@ -405,12 +525,15 @@ TESTING_README.md
 Recommended next engineering improvements:
 
 - Replace startup `Base.metadata.create_all()` fallback with Alembic-only startup.
-- Expand pytest coverage for invalid tokens, pagination, and report contents.
+- Expand pytest coverage for invalid tokens, authorization edge cases, operations endpoints, pagination, and report contents.
 - Add request/response examples for every endpoint.
 - Move JWT storage from `localStorage` to secure httpOnly cookies.
 - Add route middleware for server-side frontend auth checks.
 - Generate frontend TypeScript types from the backend OpenAPI schema.
+- Add print-friendly patient wristbands or chart labels.
+- Add realtime updates through polling or websockets.
+- Make FHIR exports fully standards-compliant before production use.
 
 ## Project Positioning
 
-BlackoutCare demonstrates a full-stack approach to resilient healthcare workflows under downtime conditions. It combines a protected clinical operations UI, local-first backend infrastructure, structured workflow modeling, auditability, and protocol-grounded AI assistance in a way that is practical for a hackathon demo and extensible toward a production-grade system.
+BlackoutCare demonstrates a full-stack approach to resilient healthcare workflows under downtime conditions. It combines a protected clinical operations UI, local-first backend infrastructure, structured workflow modeling, shift handoff, recovery planning, auditability, and protocol-grounded AI assistance in a way that is practical for a hackathon demo and extensible toward a production-grade system.
