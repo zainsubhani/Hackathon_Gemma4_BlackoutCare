@@ -68,7 +68,10 @@ def test_incident_notes_review_search_and_export(client, db_session, auth_header
     assert search_response.status_code == 200
     assert search_response.json()["patients"]
 
-    report_response = client.get(f"/exports/incidents/{incident_id}", headers=auth_headers)
+    blocked_report_response = client.get(f"/exports/incidents/{incident_id}", headers=auth_headers)
+    assert blocked_report_response.status_code == 403
+
+    report_response = client.get(f"/exports/incidents/{incident_id}", headers=admin_headers)
     assert report_response.status_code == 200
     report = report_response.json()
     assert report["incident"]["id"] == incident_id

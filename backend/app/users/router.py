@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+import secrets
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, get_current_user_optional, require_roles
+from app.core.config import settings
 from app.core.database import get_db
 from app.users import crud, schemas
 from app.users.models import User
@@ -12,10 +15,16 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.post("/", response_model=schemas.UserResponse)
 def create_user(
     user: schemas.UserCreate,
+    x_setup_token: str | None = Header(default=None),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional),
 ):
     has_users = db.query(User).first() is not None
+    if not has_users:
+        if not settings.BOOTSTRAP_ADMIN_TOKEN or not x_setup_token:
+            raise HTTPException(status_code=403, detail="Setup token required")
+        if not secrets.compare_digest(x_setup_token, settings.BOOTSTRAP_ADMIN_TOKEN):
+            raise HTTPException(status_code=403, detail="Setup token required")
     if has_users and (current_user is None or current_user.role not in {"admin", "coordinator"}):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return crud.create_user(db, user)
@@ -42,6 +51,9 @@ def get_user(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if current_user.id != user.id and current_user.role not in {"admin", "coordinator"}:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
 
     return user
 

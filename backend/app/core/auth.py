@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -11,10 +11,16 @@ optional_security = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_security),
+    access_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ):
-    token = credentials.credentials
+    token = credentials.credentials if credentials else access_token
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
     payload = decode_access_token(token)
 
     if not payload:
@@ -24,8 +30,21 @@ def get_current_user(
         )
 
     user_id = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    try:
+        parsed_user_id = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+
+    user = db.query(User).filter(User.id == parsed_user_id).first()
 
     if not user:
         raise HTTPException(
@@ -44,12 +63,13 @@ def get_current_user(
 
 def get_current_user_optional(
     credentials: HTTPAuthorizationCredentials | None = Depends(optional_security),
+    access_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ):
-    if credentials is None:
+    token = credentials.credentials if credentials else access_token
+    if token is None:
         return None
 
-    token = credentials.credentials
     payload = decode_access_token(token)
 
     if not payload:
@@ -59,7 +79,15 @@ def get_current_user_optional(
     if user_id is None:
         return None
 
-    return db.query(User).filter(User.id == int(user_id)).first()
+    try:
+        parsed_user_id = int(user_id)
+    except (TypeError, ValueError):
+        return None
+
+    user = db.query(User).filter(User.id == parsed_user_id).first()
+    if user and user.is_active != "true":
+        return None
+    return user
 
 
 def require_roles(*allowed_roles: str):

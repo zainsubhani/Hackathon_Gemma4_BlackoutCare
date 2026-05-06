@@ -14,6 +14,7 @@ sys.path.insert(0, str(BACKEND_DIR))
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["PASSWORD_RESET_MASTER_PASSWORD"] = "blackoutcare-admin-reset"
+os.environ["BOOTSTRAP_ADMIN_TOKEN"] = "test-bootstrap-token"
 
 from app.ai import models as ai_models  # noqa: E402,F401
 from app.core.database import Base, get_db  # noqa: E402
@@ -23,6 +24,9 @@ from app.patients import models as patient_models  # noqa: E402,F401
 from app.protocols import models as protocol_models  # noqa: E402,F401
 from app.triage import models as triage_models  # noqa: E402,F401
 from app.users import models as user_models  # noqa: E402,F401
+
+
+BOOTSTRAP_HEADERS = {"X-Setup-Token": "test-bootstrap-token"}
 
 
 test_engine = create_engine(
@@ -60,6 +64,7 @@ def client(db_session):
 def auth_headers(client):
     response = client.post(
         "/users/",
+        headers=BOOTSTRAP_HEADERS,
         json={
             "full_name": "Dr. Test User",
             "role": "doctor",

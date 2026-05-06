@@ -4,10 +4,10 @@ services:
     container_name: blackoutcare-postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: blackoutcare
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - blackoutcare-postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +20,7 @@ services:
     image: ollama/ollama
     container_name: blackoutcare-ollama
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - blackoutcare-ollama-data:/root/.ollama
 
@@ -39,15 +39,16 @@ services:
       dockerfile: backend/Dockerfile
     container_name: blackoutcare-backend
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/blackoutcare
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/blackoutcare
       APP_ENV: development
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       PASSWORD_RESET_MASTER_PASSWORD: ${PASSWORD_RESET_MASTER_PASSWORD:?Set PASSWORD_RESET_MASTER_PASSWORD in .env}
+      BOOTSTRAP_ADMIN_TOKEN: ${BOOTSTRAP_ADMIN_TOKEN:?Set BOOTSTRAP_ADMIN_TOKEN in .env}
       OLLAMA_URL: http://ollama:11434/api/generate
       OLLAMA_MODEL: gemma:7b
       OLLAMA_TIMEOUT_SECONDS: 30
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,7 +65,7 @@ services:
       NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
     command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./frontend:/app
       - blackoutcare-frontend-node-modules:/app/node_modules

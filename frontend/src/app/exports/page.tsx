@@ -3,7 +3,7 @@
 import { AlertTriangle, CalendarDays, Download, FileJson, FileText, Stethoscope, UsersRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
-import { API_URL, apiFetch, getToken, type Incident, type Patient, type TriageCase } from "@/lib/api";
+import { API_URL, apiFetch, type Incident, type Patient, type TriageCase } from "@/lib/api";
 
 export default function ExportsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -48,18 +48,12 @@ export default function ExportsPage() {
   }, []);
 
   async function downloadReport(format: "json" | "pdf") {
-    const token = getToken();
-    if (!token) {
-      setError("Login token not found. Please sign in again to download reports.");
-      return;
-    }
-
     setError("");
     setDownloading(format);
 
     try {
       const endpoint = format === "json" ? `${API_URL}/exports/downtime-report` : `${API_URL}/exports/downtime-report/pdf`;
-      const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch(endpoint, { credentials: "include" });
       if (!response.ok) throw new Error("Download failed");
 
       const blob = format === "json"
@@ -79,8 +73,7 @@ export default function ExportsPage() {
   }
 
   async function downloadIncidentReport(format: "json" | "pdf") {
-    const token = getToken();
-    if (!token || !activeIncident) {
+    if (!activeIncident) {
       setError("No active incident is available for export.");
       return;
     }
@@ -92,7 +85,7 @@ export default function ExportsPage() {
       const endpoint = format === "json"
         ? `${API_URL}/exports/incidents/${activeIncident.id}`
         : `${API_URL}/exports/incidents/${activeIncident.id}/pdf`;
-      const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch(endpoint, { credentials: "include" });
       if (!response.ok) throw new Error("Download failed");
 
       const blob = format === "json"

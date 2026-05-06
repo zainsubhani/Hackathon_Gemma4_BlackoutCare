@@ -1,4 +1,6 @@
 from app.events.models import Event
+from app.users import crud as user_crud
+from app.users.schemas import UserCreate
 
 
 def test_patient_creation_writes_audit_event(client, auth_headers, db_session):
@@ -78,7 +80,26 @@ def test_triage_status_update_writes_audit_event(client, auth_headers, db_sessio
 
 
 def test_json_export_writes_audit_event(client, auth_headers, db_session):
-    response = client.get("/exports/downtime-report", headers=auth_headers)
+    blocked = client.get("/exports/downtime-report", headers=auth_headers)
+    assert blocked.status_code == 403
+
+    admin = user_crud.create_user(
+        db_session,
+        UserCreate(
+            full_name="Audit Export Admin",
+            role="admin",
+            department="Ops",
+            staff_code="AUDIT-EXPORT",
+            password="password123",
+        ),
+    )
+    login_response = client.post(
+        "/auth/login",
+        json={"staff_code": admin.staff_code, "password": "password123"},
+    )
+    admin_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+    response = client.get("/exports/downtime-report", headers=admin_headers)
 
     assert response.status_code == 200
 

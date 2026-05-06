@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_roles
 from app.core.database import get_db
 from app.events.crud import create_event
 from app.exports.pdf_generators import generate_downtime_pdf
@@ -36,7 +36,7 @@ def export_triage_case(
 @router.get("/downtime-report")
 def export_full_downtime_report(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin", "coordinator")),
 ):
     report = build_full_downtime_report(db)
     create_event(
@@ -51,7 +51,7 @@ def export_full_downtime_report(
 @router.get("/downtime-report/pdf")
 def export_full_downtime_report_pdf(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin", "coordinator")),
 ):
     report = build_full_downtime_report(db)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
@@ -70,7 +70,7 @@ def export_full_downtime_report_pdf(
 def export_incident_report(
     incident_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin", "coordinator")),
 ):
     report = build_incident_report(db, incident_id)
     if report is None:
@@ -89,7 +89,7 @@ def export_incident_report(
 def export_incident_report_pdf(
     incident_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin", "coordinator")),
 ):
     report = build_incident_report(db, incident_id)
     if report is None:

@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.ai.models import AIRecommendation
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_roles
 from app.core.config import settings
 from app.core.database import get_db
 from app.events.models import Event
@@ -271,7 +271,7 @@ def incident_timeline(
     incident_id: int | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=300),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin", "coordinator")),
 ):
     if incident_id is None:
         incident = (
@@ -311,24 +311,14 @@ def incident_timeline(
 
 @router.get("/recovery-conflicts")
 def recovery_conflicts(
-    incident_id: int | None = Query(default=None),
+    incident_id: int = Query(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin", "coordinator")),
 ):
-    if incident_id is None:
-        incident = (
-            db.query(DowntimeIncident)
-            .filter(DowntimeIncident.status == "active")
-            .order_by(DowntimeIncident.started_at.desc())
-            .first()
-        )
-        incident_id = incident.id if incident else None
-
     patient_query = db.query(Patient)
     case_query = db.query(TriageCase)
-    if incident_id is not None:
-        patient_query = patient_query.filter(Patient.incident_id == incident_id)
-        case_query = case_query.filter(TriageCase.incident_id == incident_id)
+    patient_query = patient_query.filter(Patient.incident_id == incident_id)
+    case_query = case_query.filter(TriageCase.incident_id == incident_id)
 
     patients = patient_query.all()
     cases = case_query.all()
@@ -386,7 +376,7 @@ def recovery_conflicts(
 @router.get("/ai-oversight")
 def ai_oversight(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin", "coordinator")),
 ):
     recommendations = db.query(AIRecommendation).order_by(AIRecommendation.created_at.desc()).limit(200).all()
     counts = {"pending": 0, "accepted": 0, "rejected": 0, "needs_review": 0}

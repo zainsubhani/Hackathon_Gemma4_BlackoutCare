@@ -258,10 +258,14 @@ backend/
 Create a `.env` file at the project root:
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5433/blackoutcare
+POSTGRES_PASSWORD=replace-with-a-local-db-password
+DATABASE_URL=postgresql://postgres:replace-with-a-local-db-password@localhost:5433/blackoutcare
 APP_ENV=development
 SECRET_KEY=replace-with-a-long-random-secret
 PASSWORD_RESET_MASTER_PASSWORD=replace-with-an-offline-admin-reset-secret
+BOOTSTRAP_ADMIN_TOKEN=replace-with-a-one-time-local-setup-token
+AUTH_COOKIE_SECURE=false
+AUTH_COOKIE_SAMESITE=lax
 OLLAMA_URL=http://localhost:11434/api/generate
 OLLAMA_MODEL=gemma:7b
 OLLAMA_TIMEOUT_SECONDS=30
@@ -384,13 +388,13 @@ Example body:
 }
 ```
 
-Use the returned token as:
+API clients may use the returned token as:
 
 ```text
 Authorization: Bearer <access_token>
 ```
 
-The frontend stores this token as `access_token` and validates protected routes through:
+The browser frontend uses an httpOnly `access_token` cookie and validates protected routes through:
 
 ```text
 GET /auth/me
@@ -527,12 +531,12 @@ Recommended next engineering improvements:
 - Replace startup `Base.metadata.create_all()` fallback with Alembic-only startup.
 - Expand pytest coverage for invalid tokens, authorization edge cases, operations endpoints, pagination, and report contents.
 - Add request/response examples for every endpoint.
-- Move JWT storage from `localStorage` to secure httpOnly cookies.
 - Add route middleware for server-side frontend auth checks.
 - Generate frontend TypeScript types from the backend OpenAPI schema.
 - Add print-friendly patient wristbands or chart labels.
 - Add realtime updates through polling or websockets.
 - Make FHIR exports fully standards-compliant before production use.
+- Add assignment-, department-, and incident-scoped authorization for clinical records before production use.
 
 ## Project Positioning
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.ai import crud, schemas
-from app.core.auth import get_current_user
+from app.core.auth import require_roles
 from app.core.database import get_db
 from app.users.models import User
 
@@ -14,6 +14,6 @@ def review_recommendation(
     recommendation_id: int,
     payload: schemas.AIRecommendationReview,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("doctor", "admin", "coordinator")),
 ):
     return crud.review_recommendation(db, recommendation_id, payload, reviewer_id=current_user.id)

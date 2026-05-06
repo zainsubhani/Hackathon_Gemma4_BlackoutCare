@@ -26,7 +26,6 @@ import {
   API_URL,
   apiFetch,
   formatDateTime,
-  getToken,
   titleCase,
   type BackendStatus,
   type GlobalSearchResults,
@@ -39,10 +38,10 @@ const navItems = [
   { label: "Safety Board", icon: ShieldAlert, href: "/safety", section: "safety" },
   { label: "Patients", icon: UsersRound, href: "/patients", section: "patients" },
   { label: "Triage", icon: Stethoscope, href: "/triage", section: "triage" },
-  { label: "Operations", icon: ClipboardCheck, href: "/operations", section: "operations" },
+  { label: "Operations", icon: ClipboardCheck, href: "/operations", section: "operations", roles: ["admin", "coordinator"] },
   { label: "Protocols", icon: BookOpen, href: "/protocols", section: "protocols" },
   { label: "Audit Log", icon: ClipboardList, href: "/audit", section: "audit", roles: ["admin", "coordinator"] },
-  { label: "Exports", icon: Download, href: "/exports", section: "exports" },
+  { label: "Exports", icon: Download, href: "/exports", section: "exports", roles: ["admin", "coordinator"] },
   { label: "Recovery", icon: RefreshCcw, href: "/recovery", section: "recovery", roles: ["admin", "coordinator"] },
   { label: "Staff", icon: UserCog, href: "/staff", section: "staff", roles: ["admin", "coordinator"] },
 ];
@@ -86,16 +85,10 @@ export function DashboardShell({
     let mounted = true;
 
     async function loadShellData() {
-      const token = getToken();
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
-
       try {
         const [userData, statusResponse] = await Promise.all([
           apiFetch<User>("/auth/me"),
-          fetch(`${API_URL}/status`).then((response) => response.json() as Promise<BackendStatus>),
+          fetch(`${API_URL}/status`, { credentials: "include" }).then((response) => response.json() as Promise<BackendStatus>),
         ]);
         if (mounted) {
           setCurrentUser(userData);
@@ -106,7 +99,6 @@ export function DashboardShell({
         }
       } catch {
         if (mounted) {
-          localStorage.removeItem("access_token");
           router.replace("/login");
         }
       } finally {
@@ -131,8 +123,8 @@ export function DashboardShell({
       .toUpperCase();
   }, [currentUser]);
 
-  function signOut() {
-    localStorage.removeItem("access_token");
+  async function signOut() {
+    await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => null);
     router.replace("/login");
   }
 

@@ -1,10 +1,13 @@
 from app.users import crud as user_crud
 from app.users.schemas import UserCreate
 
+BOOTSTRAP_HEADERS = {"X-Setup-Token": "test-bootstrap-token"}
+
 
 def test_create_user_requires_admin_after_bootstrap(client):
     first_user = client.post(
         "/users/",
+        headers=BOOTSTRAP_HEADERS,
         json={
             "full_name": "Admin User",
             "role": "admin",

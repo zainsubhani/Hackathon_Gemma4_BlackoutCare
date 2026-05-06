@@ -3,7 +3,7 @@
 import { Download, RefreshCcw, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
-import { API_URL, apiFetch, getToken, titleCase, type Incident, type RecoveryItem, type RecoveryPreview } from "@/lib/api";
+import { API_URL, apiFetch, titleCase, type Incident, type RecoveryItem, type RecoveryPreview } from "@/lib/api";
 
 const statuses = ["reviewed", "synced", "failed", "manual_entry_required"] as const;
 
@@ -68,15 +68,14 @@ export default function RecoveryPage() {
   }
 
   async function downloadFhirBundle() {
-    const token = getToken();
-    if (!token || !activeIncident) {
+    if (!activeIncident) {
       setError("No active incident available for FHIR export.");
       return;
     }
 
     try {
       const response = await fetch(`${API_URL}/recovery/incidents/${activeIncident.id}/fhir-bundle`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!response.ok) throw new Error("Download failed");
       const blob = new Blob([JSON.stringify(await response.json(), null, 2)], { type: "application/fhir+json" });

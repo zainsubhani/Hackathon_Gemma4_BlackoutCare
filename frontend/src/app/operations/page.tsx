@@ -11,6 +11,7 @@ import {
   titleCase,
   type AIOversightReport,
   type HandoffReport,
+  type Incident,
   type ReadinessReport,
   type RecoveryConflictReport,
   type TimelineEvent,
@@ -29,11 +30,17 @@ export default function OperationsPage() {
 
     async function loadOperations() {
       try {
-        const [readinessData, handoffData, timelineData, conflictData, oversightData] = await Promise.all([
+        const [readinessData, handoffData, activeIncident] = await Promise.all([
           apiFetch<ReadinessReport>("/operations/readiness"),
           apiFetch<HandoffReport>("/operations/handoff"),
-          apiFetch<TimelineEvent[]>("/operations/timeline"),
-          apiFetch<RecoveryConflictReport>("/operations/recovery-conflicts"),
+          apiFetch<Incident | null>("/incidents/active").catch(() => null),
+        ]);
+        const incidentQuery = activeIncident ? `?incident_id=${activeIncident.id}` : "";
+        const [timelineData, conflictData, oversightData] = await Promise.all([
+          apiFetch<TimelineEvent[]>(`/operations/timeline${incidentQuery}`),
+          activeIncident
+            ? apiFetch<RecoveryConflictReport>(`/operations/recovery-conflicts?incident_id=${activeIncident.id}`)
+            : Promise.resolve({ incident_id: null, total: 0, items: [] }),
           apiFetch<AIOversightReport>("/operations/ai-oversight"),
         ]);
         if (active) {

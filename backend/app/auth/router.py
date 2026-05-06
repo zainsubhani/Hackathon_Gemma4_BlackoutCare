@@ -1,7 +1,7 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.auth.schemas import (
@@ -26,7 +26,7 @@ _failed_attempts: dict[str, list[datetime]] = {}
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     staff_code = payload.staff_code.strip().upper()
     _raise_if_locked(f"login:{staff_code}")
     user = get_user_by_staff_code(db, staff_code)
@@ -76,10 +76,26 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         }
     )
 
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite=settings.AUTH_COOKIE_SAMESITE,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+
     return {
         "access_token": token,
         "token_type": "bearer",
     }
+
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie(key="access_token", path="/")
+    return {"message": "Signed out"}
 
 
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
@@ -96,7 +112,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid administrator master password",
+            detail="Password reset could not be completed",
         )
 
     user = get_user_by_staff_code(db, staff_code)
@@ -109,8 +125,8 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
             event_data={"staff_code": staff_code, "reason": "unknown_staff_code"},
         )
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No user found for that staff code",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Password reset could not be completed",
         )
 
     user.hashed_password = hash_password(payload.new_password)

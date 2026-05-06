@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     SECRET_KEY: str
     PASSWORD_RESET_MASTER_PASSWORD: str
+    BOOTSTRAP_ADMIN_TOKEN: str | None = None
+    AUTH_COOKIE_SECURE: bool = False
+    AUTH_COOKIE_SAMESITE: str = "lax"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     AUTH_MAX_FAILED_ATTEMPTS: int = 5
     AUTH_LOCKOUT_SECONDS: int = 300

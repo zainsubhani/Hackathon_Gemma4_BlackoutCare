@@ -32,13 +32,12 @@ export default function LoginPage() {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ staff_code: staffCode, password }),
       });
 
       if (!res.ok) throw new Error("Login failed");
 
-      const data = await res.json();
-      localStorage.setItem("access_token", data.access_token);
       router.push("/dashboard");
     } catch {
       setError("Invalid staff code or password");

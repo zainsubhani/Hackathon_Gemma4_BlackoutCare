@@ -4,7 +4,6 @@ import {
   API_URL,
   apiFetch,
   formatDateTime,
-  getToken,
   titleCase,
   type AIAnalysisResult,
   type CaseNote,
@@ -286,15 +285,9 @@ export default function TriagePage() {
   }
 
   async function downloadCaseReport(caseId: number, format: "json" | "pdf") {
-    const token = getToken();
-    if (!token) {
-      setError("Login token not found. Please sign in again to download reports.");
-      return;
-    }
-
     try {
       const endpoint = format === "json" ? `${API_URL}/exports/triage-case/${caseId}` : `${API_URL}/exports/triage-case/${caseId}/pdf`;
-      const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch(endpoint, { credentials: "include" });
       if (!response.ok) throw new Error("Download failed");
       const blob = format === "json" ? new Blob([JSON.stringify(await response.json(), null, 2)], { type: "application/json" }) : await response.blob();
       const url = URL.createObjectURL(blob);

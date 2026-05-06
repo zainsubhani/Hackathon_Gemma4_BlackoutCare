@@ -58,8 +58,27 @@ def test_protocol_search_returns_keyword_matches(client, db_session, auth_header
     assert "chest pain" in results[0]["matched_keywords"]
 
 
-def test_pdf_export_returns_pdf(client, auth_headers):
-    response = client.get("/exports/downtime-report/pdf", headers=auth_headers)
+def test_pdf_export_requires_admin_or_coordinator(client, db_session, auth_headers):
+    blocked = client.get("/exports/downtime-report/pdf", headers=auth_headers)
+    assert blocked.status_code == 403
+
+    admin = user_crud.create_user(
+        db_session,
+        UserCreate(
+            full_name="Export Admin",
+            role="admin",
+            department="Operations",
+            staff_code="EXPORT-ADMIN",
+            password="password123",
+        ),
+    )
+    login_response = client.post(
+        "/auth/login",
+        json={"staff_code": admin.staff_code, "password": "password123"},
+    )
+    admin_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+    response = client.get("/exports/downtime-report/pdf", headers=admin_headers)
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"

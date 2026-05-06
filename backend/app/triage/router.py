@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_roles
 from app.core.database import get_db
 from app.triage import crud, schemas
 from app.triage.service import analyze_triage_case as analyze_triage_case_service
@@ -56,7 +56,7 @@ def get_triage_case(
 def analyze_triage_case(
     case_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("doctor", "admin", "coordinator")),
 ):
     return analyze_triage_case_service(db, case_id)
 
@@ -80,7 +80,7 @@ def update_triage_case(
     case_id: int,
     payload: schemas.TriageCaseUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("doctor", "admin", "coordinator")),
 ):
     return crud.update_triage_case(
         db,
@@ -133,6 +133,6 @@ def update_checklist_item(
     item_id: int,
     payload: schemas.ProtocolChecklistUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("doctor", "nurse", "admin", "coordinator")),
 ):
     return crud.update_checklist_item(db, item_id, payload, actor_id=current_user.id)

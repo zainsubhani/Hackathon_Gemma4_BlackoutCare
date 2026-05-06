@@ -3,10 +3,13 @@ from app.users import crud as user_crud
 from app.users.crud import get_user_by_staff_code
 from app.users.schemas import UserCreate
 
+BOOTSTRAP_HEADERS = {"X-Setup-Token": "test-bootstrap-token"}
+
 
 def test_create_user_hashes_password_and_login_returns_token(client, db_session):
     response = client.post(
         "/users/",
+        headers=BOOTSTRAP_HEADERS,
         json={
             "full_name": "Dr. Aisha Rahman",
             "role": "doctor",
@@ -50,6 +53,7 @@ def test_me_returns_authenticated_user(client, auth_headers):
 def test_forgot_password_resets_password_with_master_password(client):
     create_response = client.post(
         "/users/",
+        headers=BOOTSTRAP_HEADERS,
         json={
             "full_name": "Nurse Jamie Lee",
             "role": "nurse",
@@ -95,6 +99,7 @@ def test_forgot_password_resets_password_with_master_password(client):
 def test_forgot_password_rejects_invalid_master_password(client):
     create_response = client.post(
         "/users/",
+        headers=BOOTSTRAP_HEADERS,
         json={
             "full_name": "Nurse Mira Khan",
             "role": "nurse",
@@ -126,6 +131,7 @@ def test_forgot_password_rejects_invalid_master_password(client):
 def test_authenticated_user_can_change_password(client):
     create_response = client.post(
         "/users/",
+        headers=BOOTSTRAP_HEADERS,
         json={
             "full_name": "Dr. Password Change",
             "role": "doctor",
@@ -166,6 +172,7 @@ def test_authenticated_user_can_change_password(client):
 def test_inactive_user_cannot_login(client):
     create_response = client.post(
         "/users/",
+        headers=BOOTSTRAP_HEADERS,
         json={
             "full_name": "Disabled User",
             "role": "doctor",
