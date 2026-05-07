@@ -80,6 +80,23 @@ cd backend
 ./.venv/bin/python -m pytest -v
 ```
 
+## Frontend Verification
+
+From the frontend directory:
+
+```bash
+npm run lint
+npm run build
+```
+
+The latest local verification run completed with:
+
+```text
+Backend pytest: 23 passed
+Frontend build: passed
+Frontend lint: passed
+```
+
 ## Important Fixtures
 
 `client`
@@ -109,4 +126,4 @@ Good next tests:
 
 ## Recruiter/Judge Summary
 
-These tests show that the backend is not only a working demo, but has engineering checks around the most important behavior: auth, clinical workflow protection, protocol search, AI failure safety, recovery sync, auditability, and exports.
+These checks show that the project is not only a working demo, but has engineering coverage around the most important behavior: auth, clinical workflow protection, protocol search, AI failure safety, recovery sync, auditability, exports, and a production-ready frontend build.

@@ -25,7 +25,7 @@ Despite this critical vulnerability, there is **no reliable offline system** des
 
 ## 💡 Solution
 
-**MedRescue AI** is an **offline, AI-powered downtime copilot** that helps clinicians maintain safe and structured workflows during hospital outages.
+**BlackoutCare** is an **offline, AI-powered downtime copilot** that helps clinicians maintain safe and structured workflows during hospital outages.
 
 Instead of replacing doctors or EHR systems, it provides:
 
@@ -36,7 +36,7 @@ Instead of replacing doctors or EHR systems, it provides:
 ## ⚙️ What We Build
 
 ### 🧠 1. Offline AI Decision Support
-- Runs locally using **Gemma 4**
+- Runs locally using **Gemma through Ollama**
 - Works without internet
 - Provides structured, protocol-based recommendations
 
@@ -70,4 +70,3 @@ Instead of replacing doctors or EHR systems, it provides:
 ### 🔄 6. Recovery & Sync Mode
 - Logs all decisions locally
 - Exportable when hospital systems recover
-

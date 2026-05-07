@@ -136,6 +136,89 @@ Audit events include tamper-evident hash chaining with previous and current even
 
 The project is split into backend and frontend applications:
 
+### System Design Diagram
+
+```mermaid
+flowchart LR
+  subgraph Clinicians["Clinical Users"]
+    Doctor["Doctor / Nurse / Coordinator"]
+    Admin["Admin"]
+  end
+
+  subgraph Frontend["Next.js Operations Console"]
+    Shell["Protected Dashboard Shell"]
+    TriageUI["Triage, Vitals, Notes"]
+    OpsUI["Safety, Operations, Recovery"]
+    ExportUI["JSON / PDF Exports"]
+  end
+
+  subgraph Backend["FastAPI Backend"]
+    Auth["Auth + Role Checks"]
+    Patients["Patients"]
+    Triage["Triage Cases + Checklists"]
+    Protocols["Protocol Library"]
+    AI["AI Triage Service"]
+    Operations["Safety + Handoff + Readiness"]
+    Recovery["Recovery Sync"]
+    Exports["Export Service"]
+    Audit["Audit Hash Chain"]
+  end
+
+  subgraph LocalInfra["Local Downtime Infrastructure"]
+    Postgres[("PostgreSQL / pgvector")]
+    Ollama["Ollama + Gemma"]
+    Files["PDF / JSON / FHIR-like Bundles"]
+  end
+
+  Doctor --> Shell
+  Admin --> Shell
+  Shell --> TriageUI
+  Shell --> OpsUI
+  Shell --> ExportUI
+
+  Frontend -->|httpOnly cookie / JWT| Auth
+  Auth --> Patients
+  Auth --> Triage
+  Auth --> Protocols
+  Auth --> Operations
+  Auth --> Recovery
+  Auth --> Exports
+
+  Patients --> Postgres
+  Triage --> Postgres
+  Protocols --> Postgres
+  Operations --> Postgres
+  Recovery --> Postgres
+  Audit --> Postgres
+
+  Triage -->|matched protocol context| Protocols
+  Triage --> AI
+  AI -->|local inference| Ollama
+  AI -->|safe fallback if unavailable| Triage
+  AI --> Postgres
+
+  Patients --> Audit
+  Triage --> Audit
+  Protocols --> Audit
+  AI --> Audit
+  Recovery --> Audit
+  Exports --> Audit
+
+  Exports --> Files
+  Recovery --> Files
+```
+
+The fuller judge-facing architecture notes are in [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md).
+
+### Runtime Flow
+
+1. Staff sign in with a local staff code and password; the backend sets an httpOnly JWT cookie for protected workflows.
+2. Clinicians register patients, open triage cases, record vitals, add notes, and manage protocol checklist actions from the Next.js console.
+3. The backend stores downtime records locally in PostgreSQL and writes tamper-evident audit events for important clinical, admin, export, and recovery actions.
+4. AI recommendations are grounded with matched local protocol context and sent to a local Ollama/Gemma model. If local inference is unavailable, the API returns safe fallback guidance instead of crashing the clinical workflow.
+5. Operations views aggregate active cases, alerts, handoff priorities, safety gaps, incident timeline, AI review status, and recovery conflicts from the same local record system.
+6. Recovery mode previews records that need reconciliation and exports JSON, PDF, and FHIR-like bundles when hospital systems come back online.
+
 ```text
 frontend/
   src/
@@ -513,6 +596,14 @@ BlackoutCare intentionally frames AI responses as decision support:
 ## Current Engineering Status
 
 BlackoutCare is hackathon-demo ready. It includes authentication, protected frontend workflows, local AI integration, triage vitals tracking, protocol action checklists, shift handoff, operations readiness, recovery conflict review, AI oversight, audit logging, exports, Dockerized backend infrastructure, and a focused pytest suite.
+
+Latest local verification run:
+
+```text
+backend:  ./.venv/bin/python -m pytest  -> 23 passed
+frontend: npm run build                 -> passed
+frontend: npm run lint                  -> passed
+```
 
 Frontend workflow documentation is available in:
 

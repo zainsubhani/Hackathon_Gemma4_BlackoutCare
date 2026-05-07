@@ -42,7 +42,11 @@ export default function RecoveryPage() {
   }
 
   useEffect(() => {
-    loadRecovery();
+    const timer = window.setTimeout(() => {
+      void loadRecovery();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   async function updateStatus(item: RecoveryItem, syncStatus: string) {

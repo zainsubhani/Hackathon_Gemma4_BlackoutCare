@@ -26,7 +26,6 @@ import {
   API_URL,
   apiFetch,
   formatDateTime,
-  titleCase,
   type BackendStatus,
   type GlobalSearchResults,
   type OperationAlert,
@@ -123,6 +122,8 @@ export function DashboardShell({
       .toUpperCase();
   }, [currentUser]);
 
+  const displayedSearchResults = searchQuery.trim() ? searchResults : null;
+
   async function signOut() {
     await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => null);
     router.replace("/login");
@@ -163,7 +164,6 @@ export function DashboardShell({
 
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setSearchResults(null);
       return;
     }
 
@@ -259,12 +259,12 @@ export function DashboardShell({
                     placeholder="Search patients, cases, protocols..."
                   />
                 </div>
-                {searchResults && (
+                {displayedSearchResults && (
                   <div className="absolute left-0 right-0 top-14 z-40 max-h-96 overflow-auto rounded-xl border border-slate-200 bg-white shadow-xl">
-                    <SearchGroup title="Patients" items={searchResults.patients} clear={() => setSearchQuery("")} />
-                    <SearchGroup title="Cases" items={searchResults.triage_cases} clear={() => setSearchQuery("")} />
-                    <SearchGroup title="Protocols" items={searchResults.protocols} clear={() => setSearchQuery("")} />
-                    <SearchGroup title="Incidents" items={searchResults.incidents} clear={() => setSearchQuery("")} />
+                    <SearchGroup title="Patients" items={displayedSearchResults.patients} clear={() => setSearchQuery("")} />
+                    <SearchGroup title="Cases" items={displayedSearchResults.triage_cases} clear={() => setSearchQuery("")} />
+                    <SearchGroup title="Protocols" items={displayedSearchResults.protocols} clear={() => setSearchQuery("")} />
+                    <SearchGroup title="Incidents" items={displayedSearchResults.incidents} clear={() => setSearchQuery("")} />
                   </div>
                 )}
               </div>
