@@ -58,6 +58,49 @@ def test_protocol_search_returns_keyword_matches(client, db_session, auth_header
     assert "chest pain" in results[0]["matched_keywords"]
 
 
+def test_protocol_search_returns_semantic_matches(client, db_session, auth_headers):
+    admin = user_crud.create_user(
+        db_session,
+        UserCreate(
+            full_name="Semantic Admin",
+            role="admin",
+            department="Operations",
+            staff_code="SEMANTIC-ADMIN",
+            password="password123",
+        ),
+    )
+    login_response = client.post(
+        "/auth/login",
+        json={"staff_code": admin.staff_code, "password": "password123"},
+    )
+    admin_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+    create_response = client.post(
+        "/protocols/",
+        headers=admin_headers,
+        json={
+            "title": "Stroke Response Downtime Protocol",
+            "category": "neurological",
+            "trigger_keywords": "stroke, neurological deficit",
+            "content": "Assess facial droop, unilateral weakness, slurred speech, airway, and immediate escalation.",
+            "version": "v1",
+        },
+    )
+    assert create_response.status_code == 200
+
+    search_response = client.post(
+        "/protocols/search",
+        headers=auth_headers,
+        json={"query": "Patient has arm weakness and slurred speech"},
+    )
+
+    assert search_response.status_code == 200
+    results = search_response.json()
+    assert results[0]["title"] == "Stroke Response Downtime Protocol"
+    assert results[0]["semantic_score"] > 0
+    assert results[0]["search_strategy"] in {"semantic", "keyword+semantic"}
+
+
 def test_pdf_export_requires_admin_or_coordinator(client, db_session, auth_headers):
     blocked = client.get("/exports/downtime-report/pdf", headers=auth_headers)
     assert blocked.status_code == 403

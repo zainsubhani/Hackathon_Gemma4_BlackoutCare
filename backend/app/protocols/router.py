@@ -94,6 +94,8 @@ def search_protocols(
             "category": item["protocol"].category,
             "matched_keywords": item["matched_keywords"],
             "confidence_score": item["confidence_score"],
+            "semantic_score": item.get("semantic_score", 0),
+            "search_strategy": item.get("search_strategy", "keyword"),
             "confidence_label": item["confidence_label"],
         }
         for item in results

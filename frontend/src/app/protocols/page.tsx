@@ -225,7 +225,12 @@ function ProtocolCard({ protocol, match, onSelect }: { protocol: Protocol; match
       </div>
       <h2 className="mt-5 text-lg font-black sm:text-xl">{protocol.title}</h2>
       <p className="mt-2 line-clamp-3 min-h-12 text-sm leading-6 text-slate-500 sm:text-base">{protocol.content}</p>
-      {match && <p className="mt-3 text-xs font-bold text-teal-600">{titleCase(match.confidence_label)} match · {match.matched_keywords.join(", ")}</p>}
+      {match && (
+        <p className="mt-3 text-xs font-bold text-teal-600">
+          {titleCase(match.confidence_label)} {match.search_strategy.replace("+", " + ")} match
+          {match.matched_keywords.length > 0 ? ` · ${match.matched_keywords.join(", ")}` : ` · semantic score ${Math.round(match.semantic_score * 100)}%`}
+        </p>
+      )}
       <div className="mt-5 flex flex-wrap gap-2">
         {tags.map((tag) => (
           <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">

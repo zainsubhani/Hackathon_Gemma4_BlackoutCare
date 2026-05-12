@@ -51,6 +51,10 @@ def ensure_development_schema():
         return
 
     with engine.begin() as connection:
+        connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        connection.execute(
+            text("ALTER TABLE protocols ADD COLUMN IF NOT EXISTS embedding vector")
+        )
         connection.execute(
             text("ALTER TABLE users ADD COLUMN IF NOT EXISTS hashed_password VARCHAR")
         )

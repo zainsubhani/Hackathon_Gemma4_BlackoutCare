@@ -71,7 +71,7 @@ This project does not replace clinicians, hospital policy, or EHR systems. It is
 ### Protocols
 
 - Store local clinical downtime protocols
-- Search protocols by trigger keywords
+- Search protocols by trigger keywords and pgvector-backed semantic similarity
 - Attach matched protocol context to AI triage prompts
 - Track protocol actions as pending, done, or skipped inside a case workflow
 
@@ -324,6 +324,7 @@ backend/
 - FastAPI
 - SQLAlchemy
 - PostgreSQL with pgvector image
+- pgvector protocol embeddings for semantic protocol search
 - Pydantic Settings
 - Uvicorn
 - Ollama/Gemma for local AI inference
@@ -352,7 +353,12 @@ AUTH_COOKIE_SAMESITE=lax
 OLLAMA_URL=http://localhost:11434/api/generate
 OLLAMA_MODEL=gemma:7b
 OLLAMA_TIMEOUT_SECONDS=30
+OLLAMA_EMBEDDING_URL=http://localhost:11434/api/embeddings
+OLLAMA_EMBEDDING_MODEL=
+PROTOCOL_EMBEDDING_DIMENSIONS=384
 ```
+
+Protocol search stores an embedding on each protocol and uses pgvector cosine distance on PostgreSQL. If `OLLAMA_EMBEDDING_MODEL` is not configured, the app uses a deterministic local embedding fallback so offline demos and tests still work.
 
 ## Local Setup
 

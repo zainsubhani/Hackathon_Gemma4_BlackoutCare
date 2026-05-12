@@ -55,6 +55,8 @@ export type ProtocolSearchResult = {
   category: string;
   matched_keywords: string[];
   confidence_score: number;
+  semantic_score: number;
+  search_strategy: "keyword" | "semantic" | "keyword+semantic";
   confidence_label: string;
 };
 
