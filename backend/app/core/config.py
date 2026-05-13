@@ -24,7 +24,11 @@ class Settings(BaseSettings):
     OLLAMA_EMBEDDING_MODEL: str | None = None
     PROTOCOL_EMBEDDING_DIMENSIONS: int = 384
 
-    model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()

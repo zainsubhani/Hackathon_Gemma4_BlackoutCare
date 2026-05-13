@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Activity, Brain, Eye, EyeOff, FileText, KeyRound, Lock, ShieldCheck, Siren, UserRound, WifiOff, X } from "lucide-react";
 import { useState } from "react";
+import { setToken } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -36,7 +37,9 @@ export default function LoginPage() {
         body: JSON.stringify({ staff_code: staffCode, password }),
       });
 
+      const data = await res.json();
       if (!res.ok) throw new Error("Login failed");
+      setToken(data.access_token);
 
       router.push("/dashboard");
     } catch {

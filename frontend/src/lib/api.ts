@@ -312,8 +312,21 @@ export type GlobalSearchResults = {
   incidents: SearchItem[];
 };
 
+const ACCESS_TOKEN_KEY = "blackoutcare_access_token";
+
 export function getToken() {
-  return null;
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function setToken(token: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+}
+
+export function clearToken() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {

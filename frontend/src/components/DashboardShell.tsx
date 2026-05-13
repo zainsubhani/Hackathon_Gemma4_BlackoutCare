@@ -25,6 +25,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   API_URL,
   apiFetch,
+  clearToken,
   formatDateTime,
   type BackendStatus,
   type GlobalSearchResults,
@@ -125,6 +126,7 @@ export function DashboardShell({
   const displayedSearchResults = searchQuery.trim() ? searchResults : null;
 
   async function signOut() {
+    clearToken();
     await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => null);
     router.replace("/login");
   }
