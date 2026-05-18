@@ -3,11 +3,14 @@
 import { AlertTriangle, Clock, RefreshCcw, ShieldAlert, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
+import { PaginationBar, usePagination } from "@/components/Pagination";
 import { apiFetch, formatDateTime, titleCase, type SafetyBoard, type SafetyCase } from "@/lib/api";
 
 export default function SafetyPage() {
   const [board, setBoard] = useState<SafetyBoard | null>(null);
   const [error, setError] = useState("");
+  const pendingAiReviews = board?.pending_ai_reviews || [];
+  const aiReviewPage = usePagination(pendingAiReviews, 4);
 
   useEffect(() => {
     let active = true;
@@ -55,7 +58,10 @@ export default function SafetyPage() {
                 <h2 className="text-lg font-black">Pending AI Reviews</h2>
               </div>
               <div className="mt-4 divide-y divide-slate-100">
-                {board.pending_ai_reviews.map((item) => (
+                <div className="pb-4">
+                  <PaginationBar {...aiReviewPage} totalItems={pendingAiReviews.length} itemLabel="reviews" disabled={pendingAiReviews.length === 0} onPageChange={aiReviewPage.setCurrentPage} />
+                </div>
+                {aiReviewPage.paginatedItems.map((item) => (
                   <article key={item.id} className="py-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-bold">Recommendation {item.id}</p>
@@ -99,6 +105,7 @@ function RiskPanel({
   tone?: "slate" | "red" | "amber";
 }) {
   const iconTone = tone === "red" ? "text-red-600 bg-red-50" : tone === "amber" ? "text-amber-600 bg-amber-50" : "text-teal-600 bg-teal-50";
+  const casePage = usePagination(cases, 3);
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-3">
@@ -108,8 +115,11 @@ function RiskPanel({
         <h2 className="text-lg font-black">{title}</h2>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{cases.length}</span>
       </div>
-      <div className="mt-5 divide-y divide-slate-100">
-        {cases.map((item) => (
+      <div className="mt-5">
+        <PaginationBar {...casePage} totalItems={cases.length} itemLabel="cases" disabled={cases.length === 0} onPageChange={casePage.setCurrentPage} />
+      </div>
+      <div className="mt-4 divide-y divide-slate-100">
+        {casePage.paginatedItems.map((item) => (
           <article key={item.id} className="py-4">
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-bold">{item.patient_name || item.patient_label}</p>

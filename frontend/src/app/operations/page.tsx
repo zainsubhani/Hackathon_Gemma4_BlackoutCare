@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ElementType, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
+import { PaginationBar, usePagination } from "@/components/Pagination";
 import {
   apiFetch,
   formatDateTime,
@@ -24,6 +25,14 @@ export default function OperationsPage() {
   const [conflicts, setConflicts] = useState<RecoveryConflictReport | null>(null);
   const [oversight, setOversight] = useState<AIOversightReport | null>(null);
   const [error, setError] = useState("");
+  const handoffCases = handoff?.cases || [];
+  const timelineEvents = timeline;
+  const conflictItems = conflicts?.items || [];
+  const recentAiItems = oversight?.recent || [];
+  const handoffPage = usePagination(handoffCases, 4);
+  const timelinePage = usePagination(timelineEvents, 4);
+  const conflictPage = usePagination(conflictItems, 4);
+  const aiPage = usePagination(recentAiItems, 3);
 
   useEffect(() => {
     let active = true;
@@ -94,8 +103,9 @@ export default function OperationsPage() {
           </Panel>
 
           <Panel title="Shift Handoff">
+            <PaginationBar {...handoffPage} totalItems={handoffCases.length} itemLabel="cases" disabled={handoffCases.length === 0} onPageChange={handoffPage.setCurrentPage} />
             <div className="grid gap-3">
-              {handoff?.cases.slice(0, 8).map((item) => (
+              {handoffPage.paginatedItems.map((item) => (
                 <Link key={item.id} href="/triage" className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-teal-200 hover:bg-teal-50/40">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-black">{item.patient_name || item.patient_label}</p>
@@ -116,8 +126,9 @@ export default function OperationsPage() {
 
         <section className="mt-6 grid gap-6 xl:grid-cols-3">
           <Panel title="Incident Timeline">
+            <PaginationBar {...timelinePage} totalItems={timelineEvents.length} itemLabel="events" disabled={timelineEvents.length === 0} onPageChange={timelinePage.setCurrentPage} />
             <div className="grid gap-3">
-              {timeline.slice(0, 12).map((event) => (
+              {timelinePage.paginatedItems.map((event) => (
                 <div key={event.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-sm font-black text-slate-800">{event.description}</p>
                   <p className="mt-1 text-xs text-slate-500">{formatDateTime(event.created_at)} {event.case_id ? `- Case ${event.case_id}` : ""}</p>
@@ -128,8 +139,9 @@ export default function OperationsPage() {
           </Panel>
 
           <Panel title="Recovery Review">
+            <PaginationBar {...conflictPage} totalItems={conflictItems.length} itemLabel="items" disabled={conflictItems.length === 0} onPageChange={conflictPage.setCurrentPage} />
             <div className="grid gap-3">
-              {conflicts?.items.slice(0, 12).map((item, index) => (
+              {conflictPage.paginatedItems.map((item, index) => (
                 <Link key={`${item.type}-${item.label}-${index}`} href={item.href} className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-teal-200 hover:bg-teal-50/40">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -154,7 +166,8 @@ export default function OperationsPage() {
                   </div>
                 ))}
               </div>
-              {oversight?.recent.slice(0, 5).map((item) => (
+              <PaginationBar {...aiPage} totalItems={recentAiItems.length} itemLabel="reviews" disabled={recentAiItems.length === 0} onPageChange={aiPage.setCurrentPage} />
+              {aiPage.paginatedItems.map((item) => (
                 <Link key={item.id} href="/triage" className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-teal-200 hover:bg-teal-50/40">
                   <p className="text-sm font-black">Case {item.case_id} - {titleCase(item.review_status)}</p>
                   <p className="mt-1 line-clamp-2 text-sm text-slate-500">{item.risk_summary}</p>

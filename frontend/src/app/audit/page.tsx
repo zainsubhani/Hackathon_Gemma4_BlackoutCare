@@ -3,6 +3,7 @@
 import { BookOpen, Brain, ChevronDown, Download, FileText, Filter, Stethoscope } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
+import { PaginationBar, usePagination } from "@/components/Pagination";
 import { apiFetch, formatDateTime, titleCase, type AuditEvent } from "@/lib/api";
 
 export default function AuditPage() {
@@ -51,6 +52,7 @@ export default function AuditPage() {
   }, []);
 
   const eventTypes = Array.from(new Set(events.map((event) => event.event_type))).sort();
+  const eventPage = usePagination(events, 8);
 
   return (
     <DashboardShell active="audit">
@@ -65,11 +67,11 @@ export default function AuditPage() {
         <div className="mt-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <Filter className="h-5 w-5 text-slate-500" />
-            <FilterSelect label="All Event Types" value={eventType} onChange={(value) => { setEventType(value); loadEvents(value, ""); }} options={eventTypes} />
+            <FilterSelect label="All Event Types" value={eventType} onChange={(value) => { setEventType(value); eventPage.setCurrentPage(1); loadEvents(value, ""); }} options={eventTypes} />
             <input
               value={caseId}
               onChange={(event) => setCaseId(event.target.value)}
-              onBlur={() => loadEvents(eventType, caseId)}
+              onBlur={() => { eventPage.setCurrentPage(1); loadEvents(eventType, caseId); }}
               placeholder="Case ID"
               className="h-11 w-32 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
             />
@@ -84,8 +86,11 @@ export default function AuditPage() {
         )}
 
         <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="px-5 pt-4">
+            <PaginationBar {...eventPage} totalItems={events.length} itemLabel="events" disabled={loading || events.length === 0} onPageChange={eventPage.setCurrentPage} />
+          </div>
           <div className="divide-y divide-slate-100">
-            {events.map((event) => (
+            {eventPage.paginatedItems.map((event) => (
               <AuditRow key={event.id} event={event} />
             ))}
             {!loading && events.length === 0 && (

@@ -4,6 +4,7 @@ import { CheckCircle2, Plus, Search, Tag } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
+import { PaginationBar, usePagination } from "@/components/Pagination";
 import { apiFetch, titleCase, type Protocol, type ProtocolSearchResult } from "@/lib/api";
 
 export default function ProtocolsPage() {
@@ -30,6 +31,7 @@ export default function ProtocolsPage() {
       [protocol.title, protocol.category, protocol.trigger_keywords].some((value) => value.toLowerCase().includes(query)),
     );
   }, [matches, protocols, search]);
+  const protocolPage = usePagination(visibleProtocols, 6);
 
   async function loadProtocols() {
     setLoading(true);
@@ -135,7 +137,7 @@ export default function ProtocolsPage() {
 
   return (
     <DashboardShell active="protocols">
-      <div className="mx-auto max-w-[100rem] px-4 py-7 sm:px-6 lg:px-8 lg:py-10 xl:px-10">
+      <div className="mx-auto max-w-400 px-4 py-7 sm:px-6 lg:px-8 lg:py-10 xl:px-10">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Clinical Protocols</h1>
@@ -169,11 +171,15 @@ export default function ProtocolsPage() {
 
         <div className="mt-8 flex w-full max-w-xl items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-500 shadow-sm">
           <Search className="h-5 w-5 shrink-0" />
-          <input value={search} onChange={(event) => { setSearch(event.target.value); if (event.target.value.trim().length < 2) setMatches([]); }} className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 sm:text-base" placeholder="Search protocols by title or keyword..." />
+          <input value={search} onChange={(event) => { setSearch(event.target.value); protocolPage.setCurrentPage(1); if (event.target.value.trim().length < 2) setMatches([]); }} className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 sm:text-base" placeholder="Search protocols by title or keyword..." />
+        </div>
+
+        <div className="mt-6">
+          <PaginationBar {...protocolPage} totalItems={visibleProtocols.length} itemLabel="protocols" disabled={loading || visibleProtocols.length === 0} onPageChange={protocolPage.setCurrentPage} />
         </div>
 
         <section className="mt-6 grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
-          {visibleProtocols.map((protocol) => (
+          {protocolPage.paginatedItems.map((protocol) => (
             <ProtocolCard key={protocol.id} protocol={protocol} match={matchMap.get(protocol.id)} onSelect={() => selectProtocol(protocol.id)} />
           ))}
         </section>

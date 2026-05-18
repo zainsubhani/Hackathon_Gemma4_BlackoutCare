@@ -3,7 +3,7 @@ import requests
 from app.triage import service as triage_service
 
 
-def test_triage_ai_failure_returns_safe_503(client, auth_headers, monkeypatch):
+def test_triage_ai_failure_returns_saved_safe_fallback(client, auth_headers, monkeypatch):
     patient_response = client.post(
         "/patients/",
         headers=auth_headers,
@@ -43,7 +43,10 @@ def test_triage_ai_failure_returns_safe_503(client, auth_headers, monkeypatch):
         headers=auth_headers,
     )
 
-    assert analyze_response.status_code == 503
-    detail = analyze_response.json()["detail"]
-    assert detail["message"] == "AI recommendation service unavailable"
-    assert detail["safe_fallback"]
+    assert analyze_response.status_code == 200
+    body = analyze_response.json()
+    assert body["recommendation_id"]
+    assert body["ai_output"]["source"] == "safe fallback"
+    assert body["ai_output"]["confidence"] == "low"
+    assert body["ai_output"]["recommended_actions"]
+    assert body["ai_output"]["warnings"]

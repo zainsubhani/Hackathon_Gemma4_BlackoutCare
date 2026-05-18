@@ -352,7 +352,8 @@ AUTH_COOKIE_SECURE=false
 AUTH_COOKIE_SAMESITE=lax
 OLLAMA_URL=http://localhost:11434/api/generate
 OLLAMA_MODEL=gemma:7b
-OLLAMA_TIMEOUT_SECONDS=30
+OLLAMA_TIMEOUT_SECONDS=240
+AI_ANALYSIS_TIMEOUT_SECONDS=240
 OLLAMA_EMBEDDING_URL=http://localhost:11434/api/embeddings
 OLLAMA_EMBEDDING_MODEL=
 PROTOCOL_EMBEDDING_DIMENSIONS=384
@@ -360,7 +361,24 @@ PROTOCOL_EMBEDDING_DIMENSIONS=384
 
 Protocol search stores an embedding on each protocol and uses pgvector cosine distance on PostgreSQL. If `OLLAMA_EMBEDDING_MODEL` is not configured, the app uses a deterministic local embedding fallback so offline demos and tests still work.
 
+For best local performance on macOS, run Ollama natively instead of through Docker so Gemma can use Apple Metal acceleration. The AI analysis endpoint streams Ollama output internally and uses a longer timeout so local Gemma can finish a structured JSON response instead of immediately falling back.
+
 ## Local Setup
+
+### Native Ollama
+
+Start native Ollama before running analysis:
+
+```bash
+ollama serve
+ollama pull gemma:7b
+```
+
+Verify that the backend will be able to see the model:
+
+```bash
+curl http://127.0.0.1:11434/api/tags
+```
 
 ### Backend
 
@@ -419,10 +437,22 @@ docker compose up --build
 This starts:
 
 - PostgreSQL on host port `5433`
-- Ollama on host port `11434`
 - Backend on host port `8000`
 - Frontend on host port `3000`
-- A helper service that pulls the configured Gemma model
+
+By default, Docker Compose expects native Ollama to already be running on the host at:
+
+```text
+http://127.0.0.1:11434
+```
+
+The backend container reaches native Ollama through `host.docker.internal`.
+
+If you explicitly want the slower containerized Ollama path, start the optional profile:
+
+```bash
+docker compose --profile docker-ollama up --build
+```
 
 Run migrations manually from `backend/` when you want to manage schema changes through Alembic:
 
@@ -449,7 +479,7 @@ password: password123
 Full-access demo admin:
 
 ```text
-staff_code: ADMIN-900
+staff_code:ADMIN-900 
 password: password123
 ```
 

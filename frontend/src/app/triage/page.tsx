@@ -16,6 +16,7 @@ import { ChevronDown, Filter, Plus, UserRound } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
+import { PaginationBar, usePagination } from "@/components/Pagination";
 
 export default function TriagePage() {
   const [cases, setCases] = useState<TriageCase[]>([]);
@@ -41,6 +42,10 @@ export default function TriagePage() {
   const [editForm, setEditForm] = useState({ chief_complaint: "", symptoms: "", vitals: "", urgency_level: "unassigned", status: "active" });
 
   const patientsById = useMemo(() => new Map(patients.map((patient) => [patient.id, patient])), [patients]);
+  const casePage = usePagination(cases, 6);
+  const vitalsPage = usePagination(vitalsEntries, 3);
+  const checklistPage = usePagination(checklist, 3);
+  const notesPage = usePagination(notes, 4);
 
   async function loadData(nextUrgency = urgency, nextStatus = status) {
     setLoading(true);
@@ -128,6 +133,9 @@ export default function TriagePage() {
       setNotes(noteData);
       setVitalsEntries(vitalsData);
       setChecklist(checklistData);
+      vitalsPage.setCurrentPage(1);
+      checklistPage.setCurrentPage(1);
+      notesPage.setCurrentPage(1);
       setEditForm({
         chief_complaint: data.chief_complaint,
         symptoms: data.symptoms || "",
@@ -338,14 +346,18 @@ export default function TriagePage() {
         <div className="mt-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <Filter className="h-5 w-5 text-slate-500" />
-            <FilterSelect label="All Urgency" value={urgency} onChange={(value) => { setUrgency(value); loadData(value, status); }} options={["critical", "urgent", "stable", "unassigned"]} />
-            <FilterSelect label="All Status" value={status} onChange={(value) => { setStatus(value); loadData(urgency, value); }} options={["active", "monitoring", "escalated", "closed"]} />
+            <FilterSelect label="All Urgency" value={urgency} onChange={(value) => { setUrgency(value); casePage.setCurrentPage(1); loadData(value, status); }} options={["critical", "urgent", "stable", "unassigned"]} />
+            <FilterSelect label="All Status" value={status} onChange={(value) => { setStatus(value); casePage.setCurrentPage(1); loadData(urgency, value); }} options={["active", "monitoring", "escalated", "closed"]} />
           </div>
           <p className="text-sm font-medium text-slate-500 sm:text-base">{cases.length} cases</p>
         </div>
 
+        <div className="mt-6">
+          <PaginationBar {...casePage} totalItems={cases.length} itemLabel="cases" disabled={loading || cases.length === 0} onPageChange={casePage.setCurrentPage} />
+        </div>
+
         <section className="mt-6 grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
-          {cases.map((item) => <TriageCard key={item.id} item={item} patient={patientsById.get(item.patient_id)} onSelect={() => selectCase(item.id)} />)}
+          {casePage.paginatedItems.map((item) => <TriageCard key={item.id} item={item} patient={patientsById.get(item.patient_id)} onSelect={() => selectCase(item.id)} />)}
         </section>
         {!loading && cases.length === 0 && <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500">No triage cases found.</div>}
         {loading && <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500">Loading triage cases...</div>}
@@ -400,8 +412,11 @@ export default function TriagePage() {
                     <button className="h-11 w-full rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800">Record Vitals</button>
                   </div>
                 </form>
+                <div className="mt-4">
+                  <PaginationBar {...vitalsPage} totalItems={vitalsEntries.length} itemLabel="vitals" disabled={vitalsEntries.length === 0} onPageChange={vitalsPage.setCurrentPage} />
+                </div>
                 <div className="mt-4 grid gap-3">
-                  {vitalsEntries.map((entry) => (
+                  {vitalsPage.paginatedItems.map((entry) => (
                     <article key={entry.id} className="rounded-xl border border-slate-200 bg-white p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm font-black text-slate-700">{titleCase(entry.trend)} trend</p>
@@ -423,8 +438,11 @@ export default function TriagePage() {
                   <input required value={checklistForm.label} onChange={(event) => setChecklistForm({ label: event.target.value })} placeholder="Add protocol action..." className="h-11 rounded-xl border border-slate-200 px-3 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100" />
                   <button className="h-11 rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800">Add Action</button>
                 </form>
+                <div className="mt-4">
+                  <PaginationBar {...checklistPage} totalItems={checklist.length} itemLabel="actions" disabled={checklist.length === 0} onPageChange={checklistPage.setCurrentPage} />
+                </div>
                 <div className="mt-4 grid gap-3">
-                  {checklist.map((item) => (
+                  {checklistPage.paginatedItems.map((item) => (
                     <article key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
@@ -465,8 +483,11 @@ export default function TriagePage() {
                 <input required value={noteForm.content} onChange={(event) => setNoteForm({ ...noteForm, content: event.target.value })} placeholder="Add note..." className="h-11 rounded-xl border border-slate-200 px-3 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100" />
                 <button className="h-11 rounded-xl bg-slate-900 font-bold text-white hover:bg-slate-800">Add Note</button>
               </form>
+              <div className="mt-4">
+                <PaginationBar {...notesPage} totalItems={notes.length} itemLabel="notes" disabled={notes.length === 0} onPageChange={notesPage.setCurrentPage} />
+              </div>
               <div className="mt-4 grid gap-3">
-                {notes.map((note) => (
+                {notesPage.paginatedItems.map((note) => (
                   <article key={note.id} className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-black text-slate-700">{titleCase(note.note_type)}</p>

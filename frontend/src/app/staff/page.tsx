@@ -3,6 +3,7 @@
 import { Plus, Search, UserCog } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
+import { PaginationBar, usePagination } from "@/components/Pagination";
 import { apiFetch, formatDateTime, titleCase, type User } from "@/lib/api";
 
 const roles = ["doctor", "nurse", "admin", "coordinator"] as const;
@@ -40,6 +41,7 @@ export default function StaffPage() {
       ),
     );
   }, [search, users]);
+  const userPage = usePagination(visibleUsers, 8);
 
   async function loadUsers(nextRole = role) {
     setLoading(true);
@@ -186,7 +188,7 @@ export default function StaffPage() {
             <Search className="h-5 w-5 shrink-0" />
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => { setSearch(event.target.value); userPage.setCurrentPage(1); }}
               className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 sm:text-base"
               placeholder="Search by name, code, role..."
             />
@@ -195,6 +197,7 @@ export default function StaffPage() {
             value={role}
             onChange={(event) => {
               setRole(event.target.value);
+              userPage.setCurrentPage(1);
               loadUsers(event.target.value);
             }}
             className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none"
@@ -207,6 +210,9 @@ export default function StaffPage() {
         </div>
 
         <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="px-5 pt-4">
+            <PaginationBar {...userPage} totalItems={visibleUsers.length} itemLabel="staff" disabled={loading || visibleUsers.length === 0} onPageChange={userPage.setCurrentPage} />
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[48rem] text-left">
               <thead className="bg-slate-50 text-sm font-black uppercase tracking-[0.12em] text-slate-500">
@@ -219,7 +225,7 @@ export default function StaffPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {visibleUsers.map((user) => (
+                {userPage.paginatedItems.map((user) => (
                   <tr key={user.id} onClick={() => selectUser(user)} className="cursor-pointer transition hover:bg-slate-50/80">
                     <td className="px-5 py-5">
                       <div className="flex items-center gap-3">

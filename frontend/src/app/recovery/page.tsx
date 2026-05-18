@@ -3,6 +3,7 @@
 import { Download, RefreshCcw, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
+import { PaginationBar, usePagination } from "@/components/Pagination";
 import { API_URL, apiFetch, titleCase, type Incident, type RecoveryItem, type RecoveryPreview } from "@/lib/api";
 
 const statuses = ["reviewed", "synced", "failed", "manual_entry_required"] as const;
@@ -13,15 +14,17 @@ export default function RecoveryPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const recoveryItems = preview?.items || [];
+  const recoveryPage = usePagination(recoveryItems, 6);
 
   const grouped = useMemo(() => {
     const groups: Record<string, RecoveryItem[]> = {};
-    for (const item of preview?.items || []) {
+    for (const item of recoveryPage.paginatedItems) {
       groups[item.item_type] ||= [];
       groups[item.item_type].push(item);
     }
     return groups;
-  }, [preview]);
+  }, [recoveryPage.paginatedItems]);
 
   async function loadRecovery() {
     setLoading(true);
@@ -133,6 +136,10 @@ export default function RecoveryPage() {
               <Metric label="Synced" value={preview.summary.synced} />
               <Metric label="Needs Manual" value={preview.summary.manual_entry_required + preview.summary.failed} tone="amber" />
             </section>
+
+            <div className="mt-8">
+              <PaginationBar {...recoveryPage} totalItems={recoveryItems.length} itemLabel="records" disabled={recoveryItems.length === 0} onPageChange={recoveryPage.setCurrentPage} />
+            </div>
 
             <section className="mt-8 grid gap-6">
               {Object.entries(grouped).map(([group, items]) => (

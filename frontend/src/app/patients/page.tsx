@@ -4,6 +4,7 @@ import { Plus, Search } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
+import { PaginationBar, usePagination } from "@/components/Pagination";
 import { apiFetch, formatDateTime, titleCase, type Patient } from "@/lib/api";
 
 export default function PatientsPage() {
@@ -41,6 +42,7 @@ export default function PatientsPage() {
       (patient.full_name || "").toLowerCase().includes(query),
     );
   }, [patients, search]);
+  const patientPage = usePagination(visiblePatients, 8);
 
   async function loadPatients() {
     setLoading(true);
@@ -182,10 +184,13 @@ export default function PatientsPage() {
 
         <div className="mt-8 flex w-full max-w-xl items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-500 shadow-sm">
           <Search className="h-5 w-5 shrink-0" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 sm:text-base" placeholder="Search by name or code..." />
+          <input value={search} onChange={(event) => { setSearch(event.target.value); patientPage.setCurrentPage(1); }} className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 sm:text-base" placeholder="Search by name or code..." />
         </div>
 
         <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="px-5 pt-4">
+            <PaginationBar {...patientPage} totalItems={visiblePatients.length} itemLabel="patients" disabled={loading || visiblePatients.length === 0} onPageChange={patientPage.setCurrentPage} />
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[52rem] text-left">
               <thead className="bg-slate-50 text-sm font-black uppercase tracking-[0.12em] text-slate-500">
@@ -199,7 +204,7 @@ export default function PatientsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {visiblePatients.map((patient) => (
+                {patientPage.paginatedItems.map((patient) => (
                   <tr key={patient.id} onClick={() => selectPatient(patient.id)} className="cursor-pointer transition hover:bg-slate-50/80">
                     <td className="px-5 py-5 font-mono text-sm font-bold text-slate-900">{patient.patient_code}</td>
                     <td className="px-5 py-5 text-base font-bold text-slate-900">{patient.full_name || "Unnamed patient"}</td>

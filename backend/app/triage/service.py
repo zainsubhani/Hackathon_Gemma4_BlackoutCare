@@ -37,28 +37,30 @@ def analyze_triage_case(db: Session, case_id: int):
         parsed_response = AIRecommendationPayload.model_validate(parsed_response).model_dump()
     except (requests.RequestException, ValueError, KeyError, ValidationError) as exc:
         logger.exception("AI recommendation failed for triage case %s", case_id)
+        fallback_response = _build_fallback_recommendation(db_case, protocol_data, exc)
+        saved_recommendation = create_ai_recommendation(
+            db=db,
+            case_id=case_id,
+            recommendation=fallback_response,
+        )
         create_event(
             db=db,
-            event_type="AI_RECOMMENDATION_FAILED",
+            event_type="AI_RECOMMENDATION_FALLBACK_GENERATED",
             actor_id=db_case.created_by,
             case_id=case_id,
-            event_data={"reason": str(exc), "protocol_count": len(protocol_data)},
+            event_data={
+                "recommendation_id": saved_recommendation.id,
+                "reason": str(exc),
+                "protocol_count": len(protocol_data),
+                "fallback_source": fallback_response["source"],
+            },
         )
-        detail = {
-            "message": "AI recommendation service unavailable",
-            "safe_fallback": [
-                "Continue downtime protocol workflow manually.",
-                "Escalate to the responsible clinician for urgent review.",
-                "Document missing data and uncertainty in the patient record.",
-            ],
+
+        return {
+            "recommendation_id": saved_recommendation.id,
+            "case_id": case_id,
+            "ai_output": fallback_response,
         }
-
-        from app.core.config import settings
-
-        if settings.APP_ENV == "development":
-            detail["reason"] = str(exc)
-
-        raise HTTPException(status_code=503, detail=detail)
 
     saved_recommendation = create_ai_recommendation(
         db=db,
@@ -114,7 +116,7 @@ def _get_protocol_context(db: Session, db_case) -> list[dict]:
     matched_protocols = search_protocols(db, search_query)
 
     protocol_data = []
-    for item in matched_protocols[:3]:
+    for item in matched_protocols[:1]:
         protocol = item["protocol"]
         matched_keywords = item.get("matched_keywords", [])
         protocol_data.append(
@@ -132,3 +134,43 @@ def _get_protocol_context(db: Session, db_case) -> list[dict]:
         )
 
     return protocol_data
+
+
+def _build_fallback_recommendation(db_case, protocol_data: list[dict], exc: Exception) -> dict:
+    urgency = db_case.urgency_level if db_case.urgency_level in {"critical", "urgent", "stable"} else "urgent"
+    actions = [
+        "Continue the downtime protocol workflow manually.",
+        "Escalate to the responsible clinician for urgent review if the patient is unstable.",
+        "Document missing data, uncertainty, and handoff actions in the case notes.",
+    ]
+    warnings = [
+        "Local AI analysis was unavailable or too slow; this fallback is not model-generated.",
+        "Do not delay clinical escalation while waiting for AI support.",
+    ]
+
+    if protocol_data:
+        actions.insert(
+            0,
+            f"Review the matched local protocol: {protocol_data[0]['title']}.",
+        )
+        protocol_reasoning = [
+            protocol.get("why_used") or f"Matched local protocol: {protocol['title']}"
+            for protocol in protocol_data[:3]
+        ]
+        source = "safe fallback with matched local protocols"
+    else:
+        protocol_reasoning = ["No local protocol match was available for the fallback response."]
+        source = "safe fallback"
+
+    return {
+        "urgency": urgency,
+        "risk_summary": (
+            "Local AI analysis could not complete. Continue clinician-led downtime "
+            "assessment using available patient data, vitals, and local protocols."
+        ),
+        "recommended_actions": actions,
+        "warnings": warnings,
+        "confidence": "low",
+        "source": source,
+        "protocol_reasoning": protocol_reasoning + [f"AI error: {exc}"],
+    }

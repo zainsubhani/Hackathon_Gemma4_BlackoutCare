@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     OLLAMA_URL: str = "http://localhost:11434/api/generate"
     OLLAMA_MODEL: str = "gemma:7b"
     OLLAMA_TIMEOUT_SECONDS: int = 30
+    AI_ANALYSIS_TIMEOUT_SECONDS: int = 20
     OLLAMA_EMBEDDING_URL: str = "http://localhost:11434/api/embeddings"
     OLLAMA_EMBEDDING_MODEL: str | None = None
     PROTOCOL_EMBEDDING_DIMENSIONS: int = 384
